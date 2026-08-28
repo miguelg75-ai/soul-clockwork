@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Soul Survivor: Dark Fantasy</title>
-  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0c0a09; font-family: 'Courier Prime', monospace; color: #e7e5e4; }
-    #game-canvas { display: block; width: 100vw; height: 100vh; background-color: #1c1917; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0c0a09; font-family: 'Courier New', Courier, monospace; color: #e7e5e4; }
+    #game-canvas { display: block; width: 100vw; height: 100vh; background-color: #1c1917; image-rendering: pixelated; }
     
     #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 16px; display: none; flex-direction: column; gap: 10px; pointer-events: none; z-index: 10; }
     .xp-bar-container { width: 100%; height: 18px; background: #292524; border: 3px solid #57534e; border-radius: 4px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.8); }
@@ -41,7 +40,7 @@
     .upgrade-card:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0px rgba(0,0,0,0.6); }
     .upgrade-card.evolution { background: #4c0519; border-color: #fbbf24; }
 
-    .btn { padding: 14px 20px; border: 3px solid; font-weight: 700; cursor: pointer; font-size: 16px; font-family: 'Courier Prime', monospace; transition: 0.1s; box-shadow: 6px 6px 0px rgba(0,0,0,0.8); }
+    .btn { padding: 14px 20px; border: 3px solid; font-weight: 700; cursor: pointer; font-size: 16px; font-family: 'Courier New', Courier, monospace; transition: 0.1s; box-shadow: 6px 6px 0px rgba(0,0,0,0.8); }
     .btn:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0px rgba(0,0,0,0.8); }
     
     .btn-gold { background: #ca8a04; color: #fefce8; border-color: #fef08a; }
@@ -162,17 +161,119 @@
   </div>
 
   <script>
+    // ==========================================
+    // SISTEMA DE CARGA DE ASSETS Y SPRITESHEETS
+    // ==========================================
+
+    // Generador procedural de Spritesheet de prueba (Para evitar CORS offline)
+    // En un juego real, esto no va; simplemente cargas un .png
+    function generateKnightSheet() {
+      const c = document.createElement('canvas');
+      c.width = 128; c.height = 32; // 4 fotogramas de 32x32 px
+      const ctx = c.getContext('2d');
+      
+      const drawFrame = (ox, oy) => {
+        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(ox+16, oy+28, 10, 3, 0, 0, Math.PI*2); ctx.fill(); // Sombra
+        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(ox+6, oy+14, 10, 14); // Capa
+        ctx.fillStyle = '#374151'; ctx.fillRect(ox+10, oy+14, 12, 12); // Cuerpo
+        ctx.fillStyle = '#9ca3af'; ctx.fillRect(ox+8, oy+4, 16, 12); // Casco
+        ctx.fillStyle = '#111827'; ctx.fillRect(ox+8, oy+8, 10, 4); // Visor
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(ox+12, oy+8, 4, 4); // Ojo rojo brillante
+        ctx.fillStyle = '#d1d5db'; ctx.fillRect(ox+22, oy+8, 4, 18); // Espada
+        ctx.fillStyle = '#fbbf24'; ctx.fillRect(ox+20, oy+18, 8, 2); // Guarda de la espada
+      };
+
+      drawFrame(0, 0);   // Fotograma 0: Idle 1
+      drawFrame(32, 2);  // Fotograma 1: Idle 2 (Respirando abajo)
+      drawFrame(64, -2); // Fotograma 2: Corriendo 1 (Salto arriba)
+      drawFrame(96, 2);  // Fotograma 3: Corriendo 2 (Aterrizaje abajo)
+      
+      return c.toDataURL();
+    }
+
+    // 1. EL CARGADOR DE ASSETS (ASSET LOADER)
+    const ASSETS = { images: {}, loaded: 0, total: 1 };
+    function loadAssets(callback) {
+      const img = new Image();
+      
+      // AQUÍ IRÍA TU RUTA REAL EN EL FUTURO:
+      // img.src = './assets/caballero.png';
+      
+      img.src = generateKnightSheet(); 
+      img.onload = () => { 
+        ASSETS.images['knight'] = img; 
+        ASSETS.loaded++; 
+        if (ASSETS.loaded === ASSETS.total) callback(); 
+      };
+    }
+
+    // 2. EL ANIMADOR (STATE MACHINE)
+    class SpriteAnimator {
+      constructor(imageKey, frameWidth, frameHeight) {
+        this.imageKey = imageKey;
+        this.w = frameWidth;
+        this.h = frameHeight;
+        this.timer = 0;
+        this.frame = 0;
+        this.state = 'idle'; // 'idle' o 'run'
+        this.fps = 8; // Cuadros por segundo
+      }
+
+      update(dt, isMoving) {
+        const newState = isMoving ? 'run' : 'idle';
+        if (this.state !== newState) {
+          this.state = newState;
+          this.frame = 0; // Reiniciar animación al cambiar de estado
+          this.timer = 0;
+        }
+        
+        this.timer += dt;
+        if (this.timer >= 1 / this.fps) {
+          this.timer = 0;
+          this.frame = (this.frame + 1) % 2; // Alternar entre 2 fotogramas (0 y 1)
+        }
+      }
+
+      render(ctx, x, y, facingX) {
+        const img = ASSETS.images[this.imageKey];
+        if (!img) return;
+        
+        // Calcular índice base: Si es idle usa los cuadros 0 y 1. Si es run, usa 2 y 3.
+        let frameIndex = this.frame;
+        if (this.state === 'run') frameIndex += 2; 
+        
+        ctx.save();
+        ctx.translate(x, y);
+        
+        // Magia de Espejo: Voltear el Canvas si miramos a la izquierda
+        if (facingX < 0) ctx.scale(-1, 1);
+        
+        // 3. EL RECORTE MÁGICO (ctx.drawImage)
+        // Dibuja desde la imagen 'img'
+        // sx, sy, sw, sh (Recorte de la hoja fuente)
+        // dx, dy, dw, dh (Destino en la pantalla)
+        ctx.drawImage(
+          img, 
+          frameIndex * this.w, 0, this.w, this.h, // Recorte
+          -this.w/2, -this.h/2 - 8, this.w, this.h  // Posición destino (centrado y un poco arriba)
+        );
+        
+        ctx.restore();
+      }
+    }
+
+
     const MAPS = {
       ether: { id: 'ether', name: 'Catacumbas', desc: 'Piedra fría oscura.', color: '#94a3b8', bg1: '#1c1917', bg2: '#292524' },
       rust: { id: 'rust', name: 'Bosque Maldito', desc: 'Pantano tóxico.', color: '#4ade80', bg1: '#142015', bg2: '#1b2d1c' }
     };
 
     const CLASSES = {
-      gunner: { id: 'gunner', name: 'Arquero 🏹', weapon: 'brass_revolver', desc: 'Disparo rápido', hpMod: 0, spdMod: 0, emj: '🏹' },
-      golem: { id: 'golem', name: 'Caballero 🛡️', weapon: 'steam_vortex', desc: 'Aura de Daño', hpMod: 50, spdMod: -25, emj: '🛡️' },
-      chronos: { id: 'chronos', name: 'Ladrón 🗡️', weapon: 'galvanic_strike', desc: 'Críticos altos', hpMod: -25, spdMod: 35, emj: '🗡️' },
-      alchemist: { id: 'alchemist', name: 'Brujo 🔮', weapon: 'acid_flask', desc: 'Charcos veneno', hpMod: 10, spdMod: 0, emj: '🧙‍♂️' },
-      sentinel: { id: 'sentinel', name: 'Clérigo ✝️', weapon: 'aether_chains', desc: 'Armas giratorias', hpMod: 35, spdMod: -15, emj: '🧔‍♂️' }
+      gunner: { id: 'gunner', name: 'Arquero', weapon: 'brass_revolver', desc: 'Disparo rápido', hpMod: 0, spdMod: 0, emj: '🏹' },
+      golem: { id: 'golem', name: 'Caballero', weapon: 'steam_vortex', desc: 'Aura de Daño', hpMod: 50, spdMod: -25, emj: '🛡️' },
+      chronos: { id: 'chronos', name: 'Ladrón', weapon: 'galvanic_strike', desc: 'Críticos altos', hpMod: -25, spdMod: 35, emj: '🗡️' },
+      alchemist: { id: 'alchemist', name: 'Brujo', weapon: 'acid_flask', desc: 'Charcos veneno', hpMod: 10, spdMod: 0, emj: '🧙‍♂️' },
+      sentinel: { id: 'sentinel', name: 'Clérigo', weapon: 'aether_chains', desc: 'Armas giratorias', hpMod: 35, spdMod: -15, emj: '🧔‍♂️' }
     };
 
     const E_SPRITES = {
@@ -405,7 +506,15 @@
         this.secretBuffer = "";
         
         this.initEvents(); this.resize(); window.addEventListener('resize', () => this.resize());
-        this.renderMapSelector(); this.renderClassSelector(); this.renderTalentsMenu(); this.start();
+        this.renderMapSelector(); this.renderClassSelector(); this.renderTalentsMenu(); 
+        
+        // Inicializamos nuestro nuevo Animador (32x32 píxeles)
+        this.playerAnimator = new SpriteAnimator('knight', 32, 32);
+        
+        // Cargamos los assets ANTES de iniciar el juego
+        loadAssets(() => {
+          this.start();
+        });
       }
       resize() { this.canvas.width = window.innerWidth; this.canvas.height = window.innerHeight; }
       showAd(callback) {
@@ -418,7 +527,6 @@
         window.addEventListener('click', unlockAudio, { once: true }); window.addEventListener('touchstart', unlockAudio, { once: true }); window.addEventListener('keydown', unlockAudio, { once: true });
         window.addEventListener('keydown', (e) => {
           this.keys[e.code] = true;
-          // CHEAT CODE (M I G U E L)
           if (document.getElementById('menu-ui').style.display !== 'none') {
             this.secretBuffer = (this.secretBuffer || "") + e.key.toLowerCase();
             if (this.secretBuffer.length > 20) this.secretBuffer = this.secretBuffer.slice(-20);
@@ -742,7 +850,6 @@
         
         ctx.save(); ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
-        // Dibujar baldosas
         ctx.strokeStyle = mDef.bg2; ctx.lineWidth = 2;
         const startX = Math.floor((this.px - this.canvas.width / 2) / 64) * 64, startY = Math.floor((this.py - this.canvas.height / 2) / 64) * 64;
         for (let x = startX; x < startX + this.canvas.width + 128; x += 64) { ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, startY + this.canvas.height + 128); ctx.stroke(); }
@@ -751,8 +858,14 @@
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
         const enemies = this.enemyPool.getActive(); for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
         
-        // Render Player
-        ctx.save(); ctx.translate(this.px, this.py); ctx.font = '28px "Courier Prime", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(CLASSES[this.selectedClass].emj, 0, 0); ctx.restore();
+        // ==========================================
+        // Render Player (SISTEMA DE SPRITESHEETS)
+        // ==========================================
+        ctx.save();
+        const isMoving = (this.inputX !== 0 || this.inputY !== 0);
+        this.playerAnimator.update(dt, isMoving);
+        this.playerAnimator.render(ctx, this.px, this.py, this.facingX);
+        ctx.restore();
 
         if (this.weapons.aether_furnace) { const areaMult = 1.0 + (this.passives.pressure_boiler || 0) * 0.20 + (this.selectedClass === 'golem' ? 0.20 : 0); const rad = 145 * areaMult; ctx.save(); ctx.beginPath(); ctx.arc(this.px, this.py, rad, 0, Math.PI * 2); ctx.fillStyle = 'rgba(220, 38, 38, 0.15)'; ctx.fill(); ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); } 
         else { const vortexLvl = this.weapons.steam_vortex || 0; if (vortexLvl > 0) { const areaMult = 1.0 + (this.passives.pressure_boiler || 0) * 0.20 + (this.selectedClass === 'golem' ? 0.20 : 0); const rad = (60 + vortexLvl * 8) * areaMult; ctx.save(); ctx.beginPath(); ctx.arc(this.px, this.py, rad, 0, Math.PI * 2); ctx.fillStyle = 'rgba(234, 88, 12, 0.1)'; ctx.fill(); ctx.strokeStyle = '#ea580c'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore(); } }
