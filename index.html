@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soul Clockwork: Eclipse - Final Polish</title>
+  <title>Soul Clockwork: Eclipse - Monetization Ready</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
@@ -111,7 +111,7 @@
       <h2 style="color: #38bdf8; font-size: 24px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.6); letter-spacing: 2px;">SISTEMA PAUSADO</h2>
       <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
         <button id="btn-resume" class="btn btn-green">▶ CONTINUAR</button>
-        <button id="btn-quit" class="btn btn-slate">⏹ VOLVER AL TALLER (Abandonar)</button>
+        <button id="btn-quit" class="btn btn-slate">⏹ VOLVER AL TALLER</button>
       </div>
     </div>
   </div>
@@ -157,6 +157,16 @@
         <button id="btn-double" class="btn btn-gold">📺 ORO x2 (AD)</button>
         <button id="btn-back-menu-go" class="btn btn-slate">VOLVER AL TALLER</button>
       </div>
+    </div>
+  </div>
+  
+  <!-- PANTALLA SIMULADOR DE ANUNCIOS (MONETIZACIÓN) -->
+  <div id="ad-ui" class="ui-layer" style="display: none; z-index: 300; background: rgba(0,0,0,0.98);">
+    <div class="modal-card" style="border-color: #a855f7; box-shadow: 0 0 30px rgba(168, 85, 247, 0.4); background: #000;">
+      <h2 style="color: #c084fc; font-size: 24px; letter-spacing: 2px;">📺 ANUNCIO SIMULADO</h2>
+      <p style="color: #94a3b8; font-size: 14px; margin: 10px 0;">Preparando espacio para red de monetización futura...</p>
+      <div style="font-size: 48px; font-weight: 900; color: #f8fafc; text-shadow: 0 0 15px #ffffff; margin: 20px 0;" id="ad-timer">5</div>
+      <p style="color: #cbd5e1; font-size: 12px; margin-top: 10px;">Por favor, no cierres el juego. Recibiendo recompensa pronto.</p>
     </div>
   </div>
 
@@ -219,7 +229,6 @@
       save() { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data)); }
       defaultData() { return { gold: 0, talents: { vitality: 0, might: 0, swiftness: 0, magnetism: 0 } }; }
       
-      // NUEVO: Funciones para Exportar/Importar
       exportData() { return btoa(JSON.stringify(this.data)); }
       importData(str) { 
         try { 
@@ -764,6 +773,26 @@
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
       }
+      
+      // NUEVO: SISTEMA DE ADS SIMULADO
+      showAd(callback) {
+        const adUI = document.getElementById('ad-ui');
+        const timerEl = document.getElementById('ad-timer');
+        adUI.style.display = 'flex';
+        let timeLeft = 5;
+        timerEl.innerText = timeLeft;
+        
+        const interval = setInterval(() => {
+          timeLeft--;
+          timerEl.innerText = timeLeft;
+          if (timeLeft <= 0) {
+            clearInterval(interval);
+            adUI.style.display = 'none';
+            callback();
+          }
+        }, 1000);
+      }
+
       initEvents() {
         const unlockAudio = () => this.audio.init();
         window.addEventListener('click', unlockAudio, { once: true });
@@ -803,7 +832,6 @@
           btn.style.color = on ? '#cbd5e1' : '#ef4444';
         };
 
-        // EVENTOS DE PAUSA Y QoL
         document.getElementById('btn-pause').onclick = () => {
           if(this.isPaused) return;
           this.isPaused = true;
@@ -819,7 +847,6 @@
           this.triggerGameOver(true);
         };
 
-        // EVENTOS DE GUARDADO (CROSS-SAVE)
         document.getElementById('btn-open-save').onclick = () => {
           document.getElementById('save-data-text').value = this.meta.exportData();
           document.getElementById('save-ui').style.display = 'flex';
@@ -1422,6 +1449,7 @@
         document.getElementById('levelup-ui').style.display = 'flex';
       }
       
+      // NUEVO: Modificado para inyectar Ads antes de dar la recompensa
       triggerGameOver(died) {
         this.isPaused = true;
         const ui = document.getElementById('gameover-ui');
@@ -1430,17 +1458,24 @@
         document.getElementById('go-stats').innerHTML = `Tiempo sobrevivido:<br><b style="color:#38bdf8; font-size: 20px;">${this.formatTime(this.gameTime)}</b><br><br>Espectros purgados:<br><b style="color:#fca5a5; font-size: 20px;">${this.kills}</b><br><br>Oro extraído:<br><b style="color:#fcd34d; font-size: 20px;">🪙 ${this.runGold}</b>`;
         const btnRevive = document.getElementById('btn-revive');
         btnRevive.style.display = (died && !this.hasRevived) ? 'block' : 'none';
+        
         btnRevive.onclick = () => {
-          this.hasRevived = true;
-          this.hp = this.maxHp * 0.5;
-          ui.style.display = 'none';
-          this.isPaused = false;
+          this.showAd(() => {
+            this.hasRevived = true;
+            this.hp = this.maxHp * 0.5;
+            ui.style.display = 'none';
+            this.isPaused = false;
+          });
         };
+        
         document.getElementById('btn-double').onclick = () => {
-          this.meta.data.gold += this.runGold * 2;
-          this.meta.save();
-          this.returnToMenu();
+          this.showAd(() => {
+            this.meta.data.gold += this.runGold * 2;
+            this.meta.save();
+            this.returnToMenu();
+          });
         };
+        
         document.getElementById('btn-back-menu-go').onclick = () => {
           this.meta.data.gold += this.runGold;
           this.meta.save();
