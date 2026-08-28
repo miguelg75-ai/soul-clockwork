@@ -402,6 +402,8 @@
         this.touchActive = false; this.touchOriginX = 0; this.touchOriginY = 0; this.touchCurrentX = 0; this.touchCurrentY = 0;
         this.keys = {}; this.trauma = 0; this.nearbyBuf = new Array(128);
         this.gpPausePressed = false; this.gpActionPressed = false;
+        this.secretBuffer = "";
+        
         this.initEvents(); this.resize(); window.addEventListener('resize', () => this.resize());
         this.renderMapSelector(); this.renderClassSelector(); this.renderTalentsMenu(); this.start();
       }
@@ -414,7 +416,27 @@
       initEvents() {
         const unlockAudio = () => this.audio.init();
         window.addEventListener('click', unlockAudio, { once: true }); window.addEventListener('touchstart', unlockAudio, { once: true }); window.addEventListener('keydown', unlockAudio, { once: true });
-        window.addEventListener('keydown', (e) => this.keys[e.code] = true); window.addEventListener('keyup', (e) => this.keys[e.code] = false);
+        window.addEventListener('keydown', (e) => {
+          this.keys[e.code] = true;
+          // CHEAT CODE (M I G U E L)
+          if (document.getElementById('menu-ui').style.display !== 'none') {
+            this.secretBuffer = (this.secretBuffer || "") + e.key.toLowerCase();
+            if (this.secretBuffer.length > 20) this.secretBuffer = this.secretBuffer.slice(-20);
+            if (this.secretBuffer.includes("miguel")) {
+              this.secretBuffer = "";
+              this.meta.data.gold += 999999;
+              this.meta.save();
+              this.renderTalentsMenu();
+              this.audio.init();
+              this.audio.playEvolutionFanfare();
+              const msg = document.getElementById('menu-gold-txt');
+              msg.innerText = '👑 CÓDIGO MAESTRO ACTIVADO 👑';
+              msg.style.color = '#a855f7';
+              setTimeout(() => this.renderTalentsMenu(), 3000);
+            }
+          }
+        });
+        window.addEventListener('keyup', (e) => this.keys[e.code] = false);
         this.canvas.addEventListener('pointerdown', (e) => { if (this.isPaused) return; this.touchActive = true; this.touchOriginX = this.touchCurrentX = e.clientX; this.touchOriginY = this.touchCurrentY = e.clientY; });
         window.addEventListener('pointermove', (e) => { if (!this.touchActive || this.isPaused) return; this.touchCurrentX = e.clientX; this.touchCurrentY = e.clientY; const dx = e.clientX - this.touchOriginX, dy = e.clientY - this.touchOriginY, d = Math.hypot(dx, dy); if (d > 5) { const rad = Math.min(50, d); this.inputX = (dx / d) * (rad / 50); this.inputY = (dy / d) * (rad / 50); } });
         const resetTouch = () => { this.touchActive = false; this.inputX = this.inputY = 0; };
