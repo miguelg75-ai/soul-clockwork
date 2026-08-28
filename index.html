@@ -319,6 +319,46 @@
         return n;
       }
     }
+    
+    class DamageText {
+      constructor() { this.active = false; this.x = 0; this.y = 0; this.life = 0; this.maxLife = 0.5; this.text = ''; this.isCrit = false; }
+      reset() { this.life = 0; }
+      init(x, y, amt, isCrit) {
+        this.active = true;
+        this.x = x + (Math.random() * 16 - 8);
+        this.y = y + (Math.random() * 12 - 6);
+        this.text = Math.floor(amt).toString();
+        this.isCrit = isCrit;
+        this.life = 0;
+        this.maxLife = isCrit ? 0.7 : 0.5;
+      }
+      update(dt, pool) {
+        if (!this.active) return;
+        this.y -= (this.isCrit ? 45 : 30) * dt;
+        this.life += dt;
+        if (this.life >= this.maxLife) pool.release(this);
+      }
+      render(ctx) {
+        if (!this.active) return;
+        const progress = this.life / this.maxLife;
+        const alpha = Math.max(0, 1 - Math.pow(progress, 3));
+        const scale = this.isCrit ? (1.5 - progress * 0.4) : (1.0 - progress * 0.2);
+        
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(this.x, this.y);
+        ctx.scale(scale, scale);
+        ctx.font = this.isCrit ? '900 14px sans-serif' : 'bold 12px sans-serif';
+        ctx.fillStyle = this.isCrit ? '#fde047' : '#e2e8f0';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2.5;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeText(this.text, 0, 0);
+        ctx.fillText(this.text, 0, 0);
+        ctx.restore();
+      }
+    }
 
     class SmokeParticle {
       constructor() { this.active = false; this.x = 0; this.y = 0; this.vx = 0; this.vy = 0; this.life = 0; this.maxLife = 0.6; this.size = 6; this.color = 'rgba(203, 213, 225, 0.4)'; }
@@ -345,7 +385,7 @@
       init(x, y, dmg, rad, isPlague = false) {
         this.active = true; this.x = x; this.y = y; this.damage = dmg; this.radius = rad; this.life = 0; this.maxLife = isPlague ? 6.0 : 3.5; this.tick = 0; this.isPlague = isPlague;
       }
-      update(dt, grid, enemies, nearbyBuf, onKill) {
+      update(dt, grid, enemies, nearbyBuf, onHit) {
         if (!this.active) return;
         this.life += dt; this.tick += dt;
         if (this.tick >= 0.28) {
@@ -354,7 +394,7 @@
           for (let i = 0; i < count; i++) {
             const e = enemies[nearbyBuf[i]];
             if (e && e.active && Math.hypot(e.x - this.x, e.y - this.y) < this.radius + e.radius) {
-              if (e.applyDamage(this.damage, 0, 0)) onKill(e);
+              onHit(e, this.damage);
             }
           }
         }
@@ -560,6 +600,7 @@
         this.enemyPool = new ObjectPool(() => new Enemy(), 900);
         this.gemPool = new ObjectPool(() => new Gem(), 600);
         this.smokePool = new ObjectPool(() => new SmokeParticle(), 300);
+        this.dmgTextPool = new ObjectPool(() => new DamageText(), 800);
         this.puddles = [];
         this.grid = new SpatialGrid(3000, 3000, 64);
         this.chests = [];
@@ -705,6 +746,18 @@
         };
         requestAnimationFrame(loop);
       }
+      hitEnemy(e, baseDmg, px, py) {
+        const isCrit = Math.random() < (this.selectedClass === 'chronos' ? 0.25 : 0.05);
+        const finalDmg = isCrit ? baseDmg * 2.2 : baseDmg;
+        const dead = e.applyDamage(finalDmg, px, py);
+        
+        const txt = this.dmgTextPool.obtain();
+        if (txt) txt.init(e.x, e.y - e.radius - 4, finalDmg, isCrit);
+        
+        if (e.isBoss) this.trauma = Math.min(1.0, this.trauma + (Math.abs(px)>0 ? 0.1 : 0.02));
+        if (dead) this.killEnemy(e);
+        return dead;
+      }
       update(dt) {
         this.gameTime += dt;
         const metaStats = this.meta.getStats();
@@ -803,7 +856,7 @@
 
         for (let i = this.puddles.length - 1; i >= 0; i--) {
           const p = this.puddles[i];
-          p.update(dt, this.grid, enemies, this.nearbyBuf, (e) => this.killEnemy(e));
+          p.update(dt, this.grid, enemies, this.nearbyBuf, (e, dmg) => this.hitEnemy(e, dmg, 0, 0));
           if (!p.active) this.puddles.splice(i, 1);
         }
 
@@ -826,10 +879,8 @@
               const e = enemies[this.nearbyBuf[k]];
               if (e && e.active && Math.hypot(e.x - p.x, e.y - p.y) < e.radius + 4) {
                 const dmg = p.damage * metaStats.damageMult * (1 + (this.passives.volatile_oil || 0) * 0.15);
-                const dead = e.applyDamage(dmg, p.vx / 520, p.vy / 520);
+                this.hitEnemy(e, dmg, p.vx / 520, p.vy / 520);
                 this.audio.playHit();
-                if (e.isBoss) this.trauma = Math.min(1.0, this.trauma + 0.2);
-                if (dead) this.killEnemy(e);
                 if (!p.isGatling) {
                   p.pierce--;
                   if (p.pierce <= 0) { this.projPool.release(p); break; }
@@ -841,7 +892,12 @@
         
         const smokes = this.smokePool.getActive();
         for (let i = 0; i < smokes.length; i++) {
-          if (smokes[i].active) smokes[i].render(ctx);
+          if (smokes[i].active) smokes[i].update(dt, this.smokePool);
+        }
+        
+        const dmgTexts = this.dmgTextPool.getActive();
+        for (let i = 0; i < dmgTexts.length; i++) {
+          dmgTexts[i].update(dt, this.dmgTextPool);
         }
         
         const gems = this.gemPool.getActive();
@@ -904,7 +960,7 @@
             for (let i = 0; i < count; i++) {
               const e = enemies[this.nearbyBuf[i]];
               if (e && e.active && Math.hypot(e.x - this.px, e.y - this.py) < rad + e.radius) {
-                if (e.applyDamage(dmg, 0, 0)) this.killEnemy(e);
+                this.hitEnemy(e, dmg, 0, 0);
               }
             }
           }
@@ -919,7 +975,7 @@
               for (let i = 0; i < count; i++) {
                 const e = enemies[this.nearbyBuf[i]];
                 if (e && e.active && Math.hypot(e.x - this.px, e.y - this.py) < rad + e.radius) {
-                  if (e.applyDamage(dmg, 0, 0)) this.killEnemy(e);
+                  this.hitEnemy(e, dmg, 0, 0);
                 }
               }
             }
@@ -935,7 +991,7 @@
             for (let i = 0; i < enemies.length; i++) {
               const e = enemies[i];
               if (e && e.active && Math.hypot(e.x - this.px, e.y - this.py) < 550 * areaMult) {
-                if (e.applyDamage(95 * dmgMult, 0, 0)) this.killEnemy(e);
+                this.hitEnemy(e, 95 * dmgMult, 0, 0);
                 hits++; if (hits >= 8) break;
               }
             }
@@ -952,7 +1008,7 @@
                 const e = enemies[i];
                 if (e && e.active && Math.hypot(e.x - this.px, e.y - this.py) < 400 * areaMult) {
                   const dmg = (35 + teslaLvl * 8) * dmgMult;
-                  if (e.applyDamage(dmg, 0, 0)) this.killEnemy(e);
+                  this.hitEnemy(e, dmg, 0, 0);
                   hits++; if (hits >= 2 + teslaLvl) break;
                 }
               }
@@ -983,7 +1039,7 @@
           for (let i = 0; i < count; i++) {
             const e = enemies[this.nearbyBuf[i]];
             if (e && e.active && Math.hypot(e.x - cx, e.y - cy) < 26 + e.radius) {
-              if (e.applyDamage((isThorn ? 30 : 8 + chainLvl * 4) * dmgMult, 0, 0)) this.killEnemy(e);
+              this.hitEnemy(e, (isThorn ? 30 : 8 + chainLvl * 4) * dmgMult, 0, 0);
             }
           }
         }
@@ -1280,6 +1336,10 @@
         ctx.fillStyle = CLASSES[this.selectedClass].color; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(this.facingX * 18, this.facingY * 18); ctx.stroke();
         ctx.restore();
+        
+        const dmgTexts = this.dmgTextPool.getActive();
+        for (let i = 0; i < dmgTexts.length; i++) dmgTexts[i].render(ctx);
+        
         ctx.restore();
 
         if (this.gameTime >= 300) {
