@@ -338,12 +338,34 @@
       render(ctx) { if (!this.active) return; const progress = this.life / this.maxLife; const alpha = Math.max(0, 1 - Math.pow(progress, 3)); const scale = this.isCrit ? (1.5 - progress * 0.4) : (1.0 - progress * 0.2); ctx.save(); ctx.globalAlpha = alpha; ctx.translate(this.x, this.y); ctx.scale(scale, scale); ctx.font = this.isCrit ? '900 16px "Courier Prime", monospace' : 'bold 12px "Courier Prime", monospace'; ctx.fillStyle = this.isCrit ? '#fde047' : '#f8fafc'; ctx.strokeStyle = '#000000'; ctx.lineWidth = 3; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.strokeText(this.text, 0, 0); ctx.fillText(this.text, 0, 0); ctx.restore(); }
     }
 
+    // FASE 2: FÍSICAS DE SANGRE MEJORADAS
     class BloodDrop {
       constructor() { this.active = false; this.x = 0; this.y = 0; this.vx = 0; this.vy = 0; this.life = 0; this.color = '#7f1d1d'; }
       reset() { this.life = 0; }
-      init(x, y, vx, vy, color) { this.active = true; this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.life = 0.5 + Math.random() * 0.5; this.color = color; }
-      update(dt, pool) { if (!this.active) return; this.vy += 400 * dt; this.vx *= 0.95; this.x += this.vx * dt; this.y += this.vy * dt; this.life -= dt * 1.5; if (this.life <= 0) pool.release(this); }
-      render(ctx) { if (!this.active) return; ctx.save(); ctx.globalAlpha = Math.max(0, this.life); ctx.fillStyle = this.color; ctx.fillRect(this.x - 3, this.y - 3, 6, 6); ctx.restore(); }
+      init(x, y, vx, vy, color) { 
+        this.active = true; this.x = x; this.y = y; 
+        this.vx = vx; this.vy = vy; 
+        this.life = 2.0 + Math.random() * 3.0; // La sangre dura mucho más en el suelo
+        this.color = color; 
+      }
+      update(dt, pool) { 
+        if (!this.active) return; 
+        // Fricción exponencial para simular que choca contra el suelo y se esparce
+        this.vx *= 0.88; 
+        this.vy *= 0.88; 
+        this.x += this.vx * dt; 
+        this.y += this.vy * dt; 
+        this.life -= dt; 
+        if (this.life <= 0) pool.release(this); 
+      }
+      render(ctx) { 
+        if (!this.active) return; 
+        ctx.save(); 
+        ctx.globalAlpha = Math.min(1, this.life); // Se difumina lentamente
+        ctx.fillStyle = this.color; 
+        ctx.fillRect(this.x - 2, this.y - 2, 4, 4); 
+        ctx.restore(); 
+      }
     }
 
     class AcidPuddle {
@@ -463,6 +485,9 @@
         this.keys = {}; this.trauma = 0; this.nearbyBuf = new Array(128);
         this.gpPausePressed = false; this.gpActionPressed = false;
         this.secretBuffer = "";
+        
+        // FASE 2: Hit-Stop Timer
+        this.hitStop = 0;
         
         this.initEvents(); this.resize(); window.addEventListener('resize', () => this.resize());
         this.renderMapSelector(); this.renderClassSelector(); this.renderTalentsMenu(); 
@@ -605,7 +630,14 @@
           if (gpConnected) { if(gpInd.style.display === 'none') gpInd.style.display = 'block'; }
           else { if(gpInd.style.display === 'block') gpInd.style.display = 'none'; }
           
-          if (!this.isPaused) this.update(dt, gpActive, gpX, gpY); 
+          if (!this.isPaused) {
+            // FASE 2: LÓGICA HIT-STOP (Si hay hitstop, nos saltamos la actualización de físicas)
+            if (this.hitStop > 0) {
+              this.hitStop -= dt;
+            } else {
+              this.update(dt, gpActive, gpX, gpY); 
+            }
+          }
           this.render(dt); 
           requestAnimationFrame(loop); 
         }; 
@@ -615,6 +647,11 @@
       hitEnemy(e, baseDmg, px, py) {
         const isCrit = Math.random() < (this.selectedClass === 'chronos' ? 0.25 : 0.05); const finalDmg = isCrit ? baseDmg * 2.2 : baseDmg; const dead = e.applyDamage(finalDmg, px, py);
         const txt = this.dmgTextPool.obtain(); if (txt) txt.init(e.x, e.y - e.radius - 4, finalDmg, isCrit);
+        
+        // FASE 2: Hit-Stop en Críticos y Muertes de Jefe
+        if (isCrit) this.hitStop = 0.03; 
+        if (dead && e.isBoss) this.hitStop = 0.15;
+        
         if (e.isBoss) this.trauma = Math.min(1.0, this.trauma + (Math.abs(px)>0 ? 0.1 : 0.02)); if (dead) this.killEnemy(e); return dead;
       }
       
@@ -673,7 +710,7 @@
               const e = enemies[this.nearbyBuf[k]];
               if (e && e.active && Math.hypot(e.x - p.x, e.y - p.y) < e.radius + 4) {
                 const dmg = p.damage * metaStats.damageMult * (1 + (this.passives.volatile_oil || 0) * 0.15); this.hitEnemy(e, dmg, p.vx / 520, p.vy / 520); this.audio.playHit();
-                for(let s=0; s<3; s++) { const sp = this.sparkPool.obtain(); if(sp) sp.init(p.x, p.y, (Math.random()-0.5)*300, (Math.random()-0.5)*300 - 150, '#991b1b'); }
+                for(let s=0; s<3; s++) { const sp = this.sparkPool.obtain(); if(sp) sp.init(p.x, p.y, (Math.random()-0.5)*300, (Math.random()-0.5)*300, '#991b1b'); }
                 if (!p.isGatling) { p.pierce--; if (p.pierce <= 0) { this.projPool.release(p); break; } }
               }
             }
@@ -714,7 +751,18 @@
       
       killEnemy(e) {
         if (e.isKamikaze) { if (Math.hypot(this.px - e.x, this.py - e.y) < 85) { this.hp -= e.damage; this.trauma = Math.min(1.0, this.trauma + 0.4); } this.audio.playExplosion(); }
-        const particleCount = e.isBoss ? 40 : 8; for (let i = 0; i < particleCount; i++) { const sp = this.sparkPool.obtain(); if (sp) { const ang = Math.random() * Math.PI * 2; const spd = 50 + Math.random() * 300; sp.init(e.x, e.y, Math.cos(ang) * spd, Math.sin(ang) * spd - 100, '#991b1b'); } }
+        // FASE 2: Sangre multiplicada y expandida
+        const particleCount = e.isBoss ? 80 : 15; 
+        for (let i = 0; i < particleCount; i++) { 
+          const sp = this.sparkPool.obtain(); 
+          if (sp) { 
+            const ang = Math.random() * Math.PI * 2; 
+            const spd = 50 + Math.random() * 400; 
+            // Color de sangre más realista
+            const color = Math.random() > 0.5 ? '#7f1d1d' : '#991b1b';
+            sp.init(e.x, e.y, Math.cos(ang) * spd, Math.sin(ang) * spd, color); 
+          } 
+        }
         this.kills++; const goldMult = this.eclipseMode ? 3 : 1;
         if (e.isFinalBoss) { this.runGold += 250 * goldMult; this.triggerGameOver(false); return; } 
         else if (e.isBoss) { this.runGold += 50 * goldMult; const ch = new Chest(); ch.init(e.x, e.y); this.chests.push(ch); } 
@@ -807,13 +855,16 @@
         
         ctx.save(); ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
-        // Dibujar baldosas
         ctx.strokeStyle = mDef.bg2; ctx.lineWidth = 2;
         const startX = Math.floor((this.px - this.canvas.width / 2) / 64) * 64, startY = Math.floor((this.py - this.canvas.height / 2) / 64) * 64;
         for (let x = startX; x < startX + this.canvas.width + 128; x += 64) { ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, startY + this.canvas.height + 128); ctx.stroke(); }
         for (let y = startY; y < startY + this.canvas.height + 128; y += 64) { ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(startX + this.canvas.width + 128, y); ctx.stroke(); }
 
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
+        
+        // FASE 2: La sangre se dibuja DEBAJO de los enemigos y el jugador
+        const sparks = this.sparkPool.getActive(); for (let i = 0; i < sparks.length; i++) sparks[i].render(ctx);
+        
         const enemies = this.enemyPool.getActive(); for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
         
         ctx.save();
@@ -831,12 +882,20 @@
         const gems = this.gemPool.getActive(); for (let i = 0; i < gems.length; i++) gems[i].render(ctx);
         for (let i = 0; i < this.chests.length; i++) this.chests[i].render(ctx, dt);
         const projs = this.projPool.getActive(); for (let i = 0; i < projs.length; i++) projs[i].render(ctx);
-        const sparks = this.sparkPool.getActive(); for (let i = 0; i < sparks.length; i++) sparks[i].render(ctx);
         const dmgTexts = this.dmgTextPool.getActive(); for (let i = 0; i < dmgTexts.length; i++) dmgTexts[i].render(ctx);
         ctx.restore(); 
 
-        const darknessStart = this.eclipseMode ? 60 : 300;
-        if (this.gameTime >= darknessStart) { ctx.save(); const grad = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 90, this.canvas.width / 2, this.canvas.height / 2, 400); const maxDark = this.eclipseMode ? 0.99 : 0.90; grad.addColorStop(0, `rgba(0, 0, 0, 0)`); grad.addColorStop(0.65, `rgba(0, 0, 0, 0.7)`); grad.addColorStop(1, `rgba(0, 0, 0, ${maxDark})`); ctx.fillStyle = grad; ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); ctx.restore(); }
+        // FASE 2: CAPA DE LUZ DINÁMICA VIGNETTE
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reiniciar al espacio de la pantalla (cámara)
+        const alpha = this.eclipseMode ? 0.98 : 0.85;
+        const grad = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 50, this.canvas.width / 2, this.canvas.height / 2, 500);
+        grad.addColorStop(0, `rgba(0, 0, 0, 0)`);
+        grad.addColorStop(0.4, `rgba(0, 0, 0, ${alpha * 0.5})`);
+        grad.addColorStop(1, `rgba(0, 0, 0, ${alpha})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        ctx.restore();
 
         if (this.touchActive) { ctx.beginPath(); ctx.arc(this.touchOriginX, this.touchOriginY, 50, 0, Math.PI * 2); ctx.fillStyle = 'rgba(28, 25, 23, 0.5)'; ctx.fill(); ctx.strokeStyle = '#57534e'; ctx.lineWidth = 2; ctx.stroke(); ctx.beginPath(); ctx.arc(this.touchCurrentX, this.touchCurrentY, 20, 0, Math.PI * 2); ctx.fillStyle = '#78716c'; ctx.fill(); }
         ctx.restore();
