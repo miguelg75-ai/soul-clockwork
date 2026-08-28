@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soul Clockwork: Eclipse - Escenarios Update</title>
+  <title>Soul Clockwork: Eclipse - Neon Overhaul</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html { width: 100%; height: 100%; overflow: hidden; background-color: #040711; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc; }
@@ -185,11 +185,9 @@
         this.isPlayingBGM = false; this.nextNoteTime = 0; this.step = 0; this.timerID = null;
         this.mapType = 'ether';
         
-        // Ether (C Minor Harmonic)
         this.scaleEther = [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 246.94, 261.63]; 
         this.basslineEther = [0, 0, 2, 2, 3, 3, 4, 4, 5, 5, 4, 4, 6, 6, 4, 2];
         
-        // Rust Factory (A Phrygian Dominant - Lower, more industrial)
         this.scaleRust = [110.00, 116.54, 138.59, 146.83, 164.81, 174.61, 196.00, 220.00]; 
         this.basslineRust = [0, 0, 0, 1, 0, 0, 3, 1, 0, 0, 0, 1, 4, 3, 1, 0];
       }
@@ -231,7 +229,6 @@
         const scale = isRust ? this.scaleRust : this.scaleEther;
         const bassline = isRust ? this.basslineRust : this.basslineEther;
 
-        // Kick Drum
         if (step % 4 === 0) {
           const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
           osc.type = isRust ? 'square' : 'triangle'; 
@@ -241,7 +238,6 @@
           osc.connect(g); g.connect(this.bgmGain); osc.start(time); osc.stop(time + 0.09);
         }
         
-        // Bassline Synth
         if (step % 2 === 0 || (isRust && step % 4 === 3)) {
           const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
           osc.type = isRust ? 'square' : 'sawtooth'; 
@@ -391,22 +387,28 @@
       }
     }
 
-    class SmokeParticle {
-      constructor() { this.active = false; this.x = 0; this.y = 0; this.vx = 0; this.vy = 0; this.life = 0; this.maxLife = 0.6; this.size = 6; this.color = 'rgba(203, 213, 225, 0.4)'; }
+    class Spark {
+      constructor() { this.active = false; this.x = 0; this.y = 0; this.vx = 0; this.vy = 0; this.life = 0; this.color = '#fff'; }
       reset() { this.life = 0; }
-      init(x, y, vx, vy, size, color, maxLife = 0.6) {
-        this.x = x; this.y = y; this.vx = vx; this.vy = vy; this.size = size; this.color = color; this.life = 0; this.maxLife = maxLife;
+      init(x, y, vx, vy, color) {
+        this.active = true; this.x = x; this.y = y; this.vx = vx; this.vy = vy;
+        this.life = 0.8 + Math.random() * 0.4; this.color = color;
       }
       update(dt, pool) {
         if (!this.active) return;
-        this.x += this.vx * dt; this.y += this.vy * dt; this.life += dt;
-        if (this.life >= this.maxLife) pool.release(this);
+        this.vy += 600 * dt; // Gravedad estilo Geometry Wars
+        this.vx *= 0.98; // Fricción
+        this.x += this.vx * dt; this.y += this.vy * dt;
+        this.life -= dt * 1.8;
+        if (this.life <= 0) pool.release(this);
       }
       render(ctx) {
         if (!this.active) return;
-        const alpha = Math.max(0, 1 - (this.life / this.maxLife));
-        ctx.save(); ctx.globalAlpha = alpha * 0.45; ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, this.size * (1 + this.life * 1.5), 0, Math.PI * 2); ctx.fill();
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, this.life);
+        ctx.fillStyle = this.color;
+        ctx.shadowBlur = 12; ctx.shadowColor = this.color;
+        ctx.beginPath(); ctx.arc(this.x, this.y, this.life * 3.5, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
     }
@@ -449,19 +451,19 @@
       init(x, y, dx, dy, dmg, spd = 520, pierce = 1, isHostile = false, color = '#fbbf24', isGatling = false) {
         this.x = x; this.y = y; this.vx = dx * spd; this.vy = dy * spd; this.damage = dmg; this.pierce = pierce; this.isHostile = isHostile; this.color = color; this.isGatling = isGatling;
       }
-      update(dt, pool, smokePool) {
+      update(dt, pool, sparkPool) {
         if (!this.active) return;
         this.x += this.vx * dt; this.y += this.vy * dt; this.life += dt;
-        if (Math.random() < 0.35 && smokePool) {
-          const sp = smokePool.obtain();
-          if (sp) sp.init(this.x, this.y, -this.vx * 0.1, -this.vy * 0.1, 3, this.color, 0.25);
+        if (Math.random() < 0.25 && sparkPool) {
+          const sp = sparkPool.obtain();
+          if (sp) sp.init(this.x, this.y, -this.vx * 0.1, -this.vy * 0.1, this.color);
         }
         if (this.life > (this.isGatling ? 2.5 : 1.8)) pool.release(this);
       }
       render(ctx) {
         if (!this.active) return;
         ctx.save();
-        ctx.shadowBlur = this.isGatling ? 18 : 12; ctx.shadowColor = this.color;
+        ctx.shadowBlur = this.isGatling ? 25 : 18; ctx.shadowColor = this.color;
         ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(this.x, this.y, this.isHostile ? 5.5 : (this.isGatling ? 6 : 4), 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.isHostile ? 7 : (this.isGatling ? 8 : 5), 0, Math.PI * 2); ctx.fill();
         ctx.restore();
@@ -539,6 +541,13 @@
       render(ctx) {
         if (!this.active) return;
         ctx.save(); ctx.translate(this.x, this.y);
+        
+        ctx.shadowBlur = 15;
+        if (this.type === 0) ctx.shadowColor = '#818cf8';
+        else if (this.type === 5) ctx.shadowColor = '#ef4444';
+        else if (this.isBoss) ctx.shadowColor = this.isFinalBoss ? '#c084fc' : '#f97316';
+        else ctx.shadowColor = 'rgba(0,0,0,0)';
+
         if (this.flashTimer > 0) {
           ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2); ctx.fill();
           ctx.restore(); 
@@ -560,7 +569,6 @@
           ctx.fillStyle = '#ca8a04'; ctx.beginPath(); ctx.arc(0, -4, 6, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#422006'; ctx.beginPath(); ctx.moveTo(-9, 10); ctx.lineTo(0, -5); ctx.lineTo(9, 10); ctx.closePath(); ctx.fill();
         } else if (this.type === 5) {
-          ctx.shadowBlur = 15; ctx.shadowColor = '#ef4444';
           ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, 0, 11 * (1 + Math.sin(this.animTimer*1.5)*0.15), 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill();
         } else if (this.type === 6) {
@@ -570,7 +578,6 @@
           ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 4;
           ctx.beginPath(); ctx.arc(0, 0, 24, -Math.PI/2.5, Math.PI/2.5); ctx.stroke();
         } else if (this.isBoss) {
-          ctx.shadowBlur = 18; ctx.shadowColor = this.isFinalBoss ? '#c084fc' : '#f97316';
           ctx.fillStyle = this.isFinalBoss ? '#581c87' : '#991b1b'; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.fill();
           ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 4; ctx.stroke();
           ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(-10, -6, 4, 0, Math.PI * 2); ctx.arc(10, -6, 4, 0, Math.PI * 2); ctx.fill();
@@ -592,7 +599,7 @@
         if (!this.active) return;
         this.pulse += dt * 4;
         ctx.save();
-        ctx.shadowBlur = 16; ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 20; ctx.shadowColor = '#fbbf24';
         ctx.fillStyle = '#f59e0b'; ctx.fillRect(this.x - 12, this.y - 10, 24, 20);
         ctx.strokeStyle = '#fef08a'; ctx.lineWidth = 2.5; ctx.strokeRect(this.x - 12, this.y - 10, 24, 20);
         ctx.restore();
@@ -615,7 +622,8 @@
       }
       render(ctx) {
         if (!this.active) return;
-        ctx.save(); ctx.shadowBlur = 8; ctx.shadowColor = '#38bdf8';
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowBlur = 15; ctx.shadowColor = '#38bdf8';
         ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(this.x, this.y, 4, 0, Math.PI * 2); ctx.fill();
         ctx.restore();
       }
@@ -630,7 +638,7 @@
         this.projPool = new ObjectPool(() => new Projectile(), 600);
         this.enemyPool = new ObjectPool(() => new Enemy(), 900);
         this.gemPool = new ObjectPool(() => new Gem(), 600);
-        this.smokePool = new ObjectPool(() => new SmokeParticle(), 300);
+        this.sparkPool = new ObjectPool(() => new Spark(), 1500); // Reemplazamos smokePool
         this.dmgTextPool = new ObjectPool(() => new DamageText(), 800);
         this.puddles = [];
         this.grid = new SpatialGrid(3000, 3000, 64);
@@ -826,10 +834,7 @@
           this.px += this.inputX * this.speed * dt;
           this.py += this.inputY * this.speed * dt;
         }
-        if (Math.random() < 0.25) {
-          const sp = this.smokePool.obtain();
-          if (sp) sp.init(this.px + (Math.random() * 8 - 4), this.py + 6, -this.inputX * 20, -this.inputY * 20, 5, 'rgba(203, 213, 225, 0.3)', 0.5);
-        }
+        
         const sec = this.gameTime;
         if (sec >= 120 && !this.eventsTriggered.min2_golem) {
           this.eventsTriggered.min2_golem = true;
@@ -916,7 +921,7 @@
         for (let i = 0; i < projs.length; i++) {
           const p = projs[i];
           if (!p.active) continue;
-          p.update(dt, this.projPool, this.smokePool);
+          p.update(dt, this.projPool, this.sparkPool);
           if (!p.active) continue;
           if (p.isHostile) {
             if (Math.hypot(this.px - p.x, this.py - p.y) < 14) {
@@ -933,6 +938,13 @@
                 const dmg = p.damage * metaStats.damageMult * (1 + (this.passives.volatile_oil || 0) * 0.15);
                 this.hitEnemy(e, dmg, p.vx / 520, p.vy / 520);
                 this.audio.playHit();
+                
+                // Efecto de chispa al impactar
+                for(let s=0; s<4; s++) {
+                  const sp = this.sparkPool.obtain();
+                  if(sp) sp.init(p.x, p.y, (Math.random()-0.5)*300, (Math.random()-0.5)*300 - 150, p.color);
+                }
+
                 if (!p.isGatling) {
                   p.pierce--;
                   if (p.pierce <= 0) { this.projPool.release(p); break; }
@@ -942,9 +954,9 @@
           }
         }
         
-        const smokes = this.smokePool.getActive();
-        for (let i = 0; i < smokes.length; i++) {
-          if (smokes[i].active) smokes[i].update(dt, this.smokePool);
+        const sparks = this.sparkPool.getActive();
+        for (let i = 0; i < sparks.length; i++) {
+          if (sparks[i].active) sparks[i].update(dt, this.sparkPool);
         }
         
         const dmgTexts = this.dmgTextPool.getActive();
@@ -1117,12 +1129,20 @@
             this.trauma = Math.min(1.0, this.trauma + 0.4);
           }
           this.audio.playExplosion();
-          for (let i = 0; i < 14; i++) {
-            const sp = this.smokePool.obtain();
-            if (sp) {
-              const ang = Math.random() * Math.PI * 2;
-              sp.init(e.x, e.y, Math.cos(ang) * 220, Math.sin(ang) * 220, 8, '#ef4444', 0.5);
-            }
+        }
+        
+        // Efecto Neon: Explosión de Chispas
+        const particleCount = e.isBoss ? 50 : 10;
+        for (let i = 0; i < particleCount; i++) {
+          const sp = this.sparkPool.obtain();
+          if (sp) {
+            const ang = Math.random() * Math.PI * 2;
+            const spd = 50 + Math.random() * 350;
+            let pColor = '#cbd5e1';
+            if (e.isKamikaze) pColor = '#ef4444';
+            else if (e.isShielded) pColor = '#38bdf8';
+            else if (e.isBoss) pColor = '#f59e0b';
+            sp.init(e.x, e.y, Math.cos(ang) * spd, Math.sin(ang) * spd - 150, pColor);
           }
         }
         
@@ -1320,15 +1340,18 @@
           ctx.translate((Math.random() * 2 - 1) * shk, (Math.random() * 2 - 1) * shk);
         }
         
+        // EFECTO NEON 1: Motion Blur (Estelas)
         const isRust = this.selectedMap === 'rust';
-        ctx.fillStyle = isRust ? '#130a06' : '#060913';
+        ctx.fillStyle = isRust ? 'rgba(19, 10, 6, 0.35)' : 'rgba(6, 9, 19, 0.35)';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         
         ctx.save();
         ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
+        // EFECTO NEON 4: Cuadrícula Pulsante
+        const pulse = 1 + Math.sin(this.gameTime * 4) * 0.5;
         ctx.strokeStyle = isRust ? 'rgba(67, 30, 15, 0.4)' : 'rgba(30, 41, 59, 0.25)'; 
-        ctx.lineWidth = 1;
+        ctx.lineWidth = pulse;
         const startX = Math.floor((this.px - this.canvas.width / 2) / 64) * 64, startY = Math.floor((this.py - this.canvas.height / 2) / 64) * 64;
         for (let x = startX; x < startX + this.canvas.width + 128; x += 64) {
           ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, startY + this.canvas.height + 128); ctx.stroke();
@@ -1337,12 +1360,25 @@
           ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(startX + this.canvas.width + 128, y); ctx.stroke();
         }
 
+        // Draw Base Entities
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
-        const smokes = this.smokePool.getActive();
-        for (let i = 0; i < smokes.length; i++) {
-          if (smokes[i].active) smokes[i].render(ctx);
-        }
+        const enemies = this.enemyPool.getActive();
+        for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
+        
+        // Autómata (Jugador)
+        ctx.save(); ctx.translate(this.px, this.py);
+        ctx.shadowBlur = 18; ctx.shadowColor = CLASSES[this.selectedClass].color;
+        ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = CLASSES[this.selectedClass].color; ctx.lineWidth = 2.5; ctx.stroke();
+        
+        // EFECTO NEON 3: Brillo aditivo en partes internas
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = CLASSES[this.selectedClass].color; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(this.facingX * 18, this.facingY * 18); ctx.stroke();
+        ctx.restore();
 
+        // Auras / Vórtices
+        ctx.globalCompositeOperation = 'lighter';
         if (this.weapons.aether_furnace) {
           const areaMult = 1.0 + (this.passives.pressure_boiler || 0) * 0.20 + (this.selectedClass === 'golem' ? 0.20 : 0);
           const rad = 145 * areaMult;
@@ -1377,27 +1413,23 @@
           ctx.restore();
         }
 
+        // Draw Glowing Entities (Proyectiles, Gemas, Chispas)
         const gems = this.gemPool.getActive();
         for (let i = 0; i < gems.length; i++) gems[i].render(ctx);
         for (let i = 0; i < this.chests.length; i++) this.chests[i].render(ctx, dt);
         const projs = this.projPool.getActive();
         for (let i = 0; i < projs.length; i++) projs[i].render(ctx);
-        const enemies = this.enemyPool.getActive();
-        for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
-
-        ctx.save(); ctx.translate(this.px, this.py);
-        ctx.shadowBlur = 18; ctx.shadowColor = CLASSES[this.selectedClass].color;
-        ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = CLASSES[this.selectedClass].color; ctx.lineWidth = 2.5; ctx.stroke();
-        ctx.fillStyle = CLASSES[this.selectedClass].color; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(this.facingX * 18, this.facingY * 18); ctx.stroke();
-        ctx.restore();
+        const sparks = this.sparkPool.getActive();
+        for (let i = 0; i < sparks.length; i++) sparks[i].render(ctx);
+        
+        ctx.globalCompositeOperation = 'source-over'; // Restaurar composición
         
         const dmgTexts = this.dmgTextPool.getActive();
         for (let i = 0; i < dmgTexts.length; i++) dmgTexts[i].render(ctx);
         
-        ctx.restore();
+        ctx.restore(); // Restaurar translate cámara
 
+        // Viñeta final
         if (this.gameTime >= 300) {
           ctx.save();
           const grad = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 90, this.canvas.width / 2, this.canvas.height / 2, 400);
