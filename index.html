@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soul Clockwork: Eclipse - Neon Overhaul</title>
+  <title>Soul Clockwork: Eclipse - Nightmare Update</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html { width: 100%; height: 100%; overflow: hidden; background-color: #040711; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc; }
@@ -66,7 +66,12 @@
       <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 8px;">3. MEJORAS PERMANENTES:</div>
       <div class="talents-list" id="talents-container"></div>
       
-      <button id="btn-start" class="btn btn-green" style="font-size: 16px; margin-top: 4px;">⚔️ INICIAR EXPEDICIÓN</button>
+      <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; padding: 10px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 0 8px rgba(239,68,68,0.3);" onclick="document.getElementById('eclipse-toggle').click()">
+        <input type="checkbox" id="eclipse-toggle" style="pointer-events: none; width: 16px; height: 16px; accent-color: #ef4444;">
+        <span style="color: #fca5a5; font-weight: bold; font-size: 13px; text-shadow: 0 0 5px #ef4444;">🔥 MODO ECLIPSE (Enemigos x2, Oro x3)</span>
+      </div>
+      
+      <button id="btn-start" class="btn btn-green" style="font-size: 16px; margin-top: 8px;">⚔️ INICIAR EXPEDICIÓN</button>
     </div>
   </div>
 
@@ -396,8 +401,8 @@
       }
       update(dt, pool) {
         if (!this.active) return;
-        this.vy += 600 * dt; // Gravedad estilo Geometry Wars
-        this.vx *= 0.98; // Fricción
+        this.vy += 600 * dt; 
+        this.vx *= 0.98; 
         this.x += this.vx * dt; this.y += this.vy * dt;
         this.life -= dt * 1.8;
         if (this.life <= 0) pool.release(this);
@@ -481,7 +486,7 @@
         this.kx = this.ky = 0; this.isBoss = false; this.isFinalBoss = false; 
         this.shootTimer = 0; this.flashTimer = 0; this.isKamikaze = false; this.isShielded = false; this.facing = 0;
       }
-      init(type, x, y, diff) {
+      init(type, x, y, diff, eclipseMode = false) {
         this.x = x; this.y = y; this.type = type; this.isBoss = false; this.isFinalBoss = false;
         if (type === 0) { this.maxHp = 16 * diff; this.speed = 95; this.radius = 9; this.damage = 6; }
         else if (type === 1) { this.maxHp = 70 * diff; this.speed = 45; this.radius = 16; this.damage = 14; }
@@ -492,6 +497,13 @@
         else if (type === 6) { this.maxHp = 130 * diff; this.speed = 35; this.radius = 18; this.damage = 15; this.isShielded = true; }
         else if (type === 99) { this.isBoss = true; this.maxHp = 650 * diff; this.speed = 52; this.radius = 32; this.damage = 25; }
         else if (type === 100) { this.isFinalBoss = true; this.isBoss = true; this.maxHp = 1800 * diff; this.speed = 65; this.radius = 36; this.damage = 30; }
+        
+        if (eclipseMode) {
+            this.maxHp *= 2;
+            this.speed *= 1.35;
+            this.damage *= 1.5;
+        }
+        
         this.hp = this.maxHp;
       }
       applyDamage(amt, px, py) {
@@ -638,7 +650,7 @@
         this.projPool = new ObjectPool(() => new Projectile(), 600);
         this.enemyPool = new ObjectPool(() => new Enemy(), 900);
         this.gemPool = new ObjectPool(() => new Gem(), 600);
-        this.sparkPool = new ObjectPool(() => new Spark(), 1500); // Reemplazamos smokePool
+        this.sparkPool = new ObjectPool(() => new Spark(), 1500); 
         this.dmgTextPool = new ObjectPool(() => new DamageText(), 800);
         this.puddles = [];
         this.grid = new SpatialGrid(3000, 3000, 64);
@@ -646,6 +658,7 @@
         
         this.selectedMap = 'ether';
         this.selectedClass = 'gunner';
+        this.eclipseMode = false;
         
         this.px = 400; this.py = 300;
         this.maxHp = 100; this.hp = 100;
@@ -776,6 +789,7 @@
         });
       }
       startRun() {
+        this.eclipseMode = document.getElementById('eclipse-toggle').checked;
         this.audio.setMap(this.selectedMap);
         const stats = this.meta.getStats();
         const cls = CLASSES[this.selectedClass];
@@ -834,13 +848,16 @@
           this.px += this.inputX * this.speed * dt;
           this.py += this.inputY * this.speed * dt;
         }
-        
+        if (Math.random() < 0.25) {
+          const sp = this.smokePool.obtain();
+          if (sp) sp.init(this.px + (Math.random() * 8 - 4), this.py + 6, -this.inputX * 20, -this.inputY * 20, 5, 'rgba(203, 213, 225, 0.3)', 0.5);
+        }
         const sec = this.gameTime;
         if (sec >= 120 && !this.eventsTriggered.min2_golem) {
           this.eventsTriggered.min2_golem = true;
           this.showAlert('⚠️ MINIBOSS: GÓLEM DE VAPOR', '#ef4444');
           const boss = this.enemyPool.obtain();
-          if (boss) boss.init(99, this.px + 400, this.py, 1.0);
+          if (boss) boss.init(99, this.px + 400, this.py, 1.0, this.eclipseMode);
           this.trauma = 0.8;
         }
         if (sec >= 210 && !this.eventsTriggered.min330_swarm) {
@@ -849,7 +866,7 @@
           for (let i = 0; i < 70; i++) {
             const angle = (i / 70) * Math.PI * 2;
             const rat = this.enemyPool.obtain();
-            if (rat) rat.init(0, this.px + Math.cos(angle) * 520, this.py + Math.sin(angle) * 520, 1.2);
+            if (rat) rat.init(0, this.px + Math.cos(angle) * 520, this.py + Math.sin(angle) * 520, 1.2, this.eclipseMode);
           }
           this.trauma = 0.5;
         }
@@ -859,7 +876,7 @@
           for (let i = 0; i < 8; i++) {
             const angle = Math.random() * Math.PI * 2;
             const c = this.enemyPool.obtain();
-            if (c) c.init(4, this.px + Math.cos(angle) * 480, this.py + Math.sin(angle) * 480, 1.4);
+            if (c) c.init(4, this.px + Math.cos(angle) * 480, this.py + Math.sin(angle) * 480, 1.4, this.eclipseMode);
           }
           this.trauma = 0.6;
         }
@@ -867,7 +884,7 @@
           this.eventsTriggered.min8_finalboss = true;
           this.showAlert('👑 ¡JEFE FINAL: EL ARCHIMAGO MECÁNICO!', '#c084fc');
           const finalBoss = this.enemyPool.obtain();
-          if (finalBoss) finalBoss.init(100, this.px + 450, this.py, 1.5);
+          if (finalBoss) finalBoss.init(100, this.px + 450, this.py, 1.5, this.eclipseMode);
           this.trauma = 1.0;
         }
         
@@ -883,7 +900,7 @@
             else if (min > 3.0 && Math.random() < 0.4) type = 2;
             else if (min > 1.5 && Math.random() < 0.3) type = 3;
             else if (min > 4.0 && Math.random() < 0.2) type = 1;
-            e.init(type, sx, sy, 1 + min * 0.2);
+            e.init(type, sx, sy, 1 + min * 0.2, this.eclipseMode);
           }
         }
         
@@ -939,7 +956,6 @@
                 this.hitEnemy(e, dmg, p.vx / 520, p.vy / 520);
                 this.audio.playHit();
                 
-                // Efecto de chispa al impactar
                 for(let s=0; s<4; s++) {
                   const sp = this.sparkPool.obtain();
                   if(sp) sp.init(p.x, p.y, (Math.random()-0.5)*300, (Math.random()-0.5)*300 - 150, p.color);
@@ -1131,7 +1147,6 @@
           this.audio.playExplosion();
         }
         
-        // Efecto Neon: Explosión de Chispas
         const particleCount = e.isBoss ? 50 : 10;
         for (let i = 0; i < particleCount; i++) {
           const sp = this.sparkPool.obtain();
@@ -1147,18 +1162,20 @@
         }
         
         this.kills++;
+        const goldMult = this.eclipseMode ? 3 : 1;
+        
         if (e.isFinalBoss) {
-          this.runGold += 250;
+          this.runGold += 250 * goldMult;
           this.triggerGameOver(false);
           return;
         } else if (e.isBoss) {
-          this.runGold += 50;
+          this.runGold += 50 * goldMult;
           const ch = new Chest(); ch.init(e.x, e.y);
           this.chests.push(ch);
         } else {
-          this.runGold += 2;
+          this.runGold += 2 * goldMult;
           const gem = this.gemPool.obtain();
-          if (gem) gem.init(e.x, e.y, 15);
+          if (gem) gem.init(e.x, e.y, this.eclipseMode ? 25 : 15);
         }
         this.enemyPool.release(e);
       }
@@ -1340,7 +1357,6 @@
           ctx.translate((Math.random() * 2 - 1) * shk, (Math.random() * 2 - 1) * shk);
         }
         
-        // EFECTO NEON 1: Motion Blur (Estelas)
         const isRust = this.selectedMap === 'rust';
         ctx.fillStyle = isRust ? 'rgba(19, 10, 6, 0.35)' : 'rgba(6, 9, 19, 0.35)';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -1348,7 +1364,6 @@
         ctx.save();
         ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
-        // EFECTO NEON 4: Cuadrícula Pulsante
         const pulse = 1 + Math.sin(this.gameTime * 4) * 0.5;
         ctx.strokeStyle = isRust ? 'rgba(67, 30, 15, 0.4)' : 'rgba(30, 41, 59, 0.25)'; 
         ctx.lineWidth = pulse;
@@ -1360,24 +1375,20 @@
           ctx.beginPath(); ctx.moveTo(startX, y); ctx.lineTo(startX + this.canvas.width + 128, y); ctx.stroke();
         }
 
-        // Draw Base Entities
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
         const enemies = this.enemyPool.getActive();
         for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
         
-        // Autómata (Jugador)
         ctx.save(); ctx.translate(this.px, this.py);
         ctx.shadowBlur = 18; ctx.shadowColor = CLASSES[this.selectedClass].color;
         ctx.fillStyle = '#1e293b'; ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = CLASSES[this.selectedClass].color; ctx.lineWidth = 2.5; ctx.stroke();
         
-        // EFECTO NEON 3: Brillo aditivo en partes internas
         ctx.globalCompositeOperation = 'lighter';
         ctx.fillStyle = CLASSES[this.selectedClass].color; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
         ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(this.facingX * 18, this.facingY * 18); ctx.stroke();
         ctx.restore();
 
-        // Auras / Vórtices
         ctx.globalCompositeOperation = 'lighter';
         if (this.weapons.aether_furnace) {
           const areaMult = 1.0 + (this.passives.pressure_boiler || 0) * 0.20 + (this.selectedClass === 'golem' ? 0.20 : 0);
@@ -1413,7 +1424,6 @@
           ctx.restore();
         }
 
-        // Draw Glowing Entities (Proyectiles, Gemas, Chispas)
         const gems = this.gemPool.getActive();
         for (let i = 0; i < gems.length; i++) gems[i].render(ctx);
         for (let i = 0; i < this.chests.length; i++) this.chests[i].render(ctx, dt);
@@ -1422,23 +1432,25 @@
         const sparks = this.sparkPool.getActive();
         for (let i = 0; i < sparks.length; i++) sparks[i].render(ctx);
         
-        ctx.globalCompositeOperation = 'source-over'; // Restaurar composición
+        ctx.globalCompositeOperation = 'source-over'; 
         
         const dmgTexts = this.dmgTextPool.getActive();
         for (let i = 0; i < dmgTexts.length; i++) dmgTexts[i].render(ctx);
         
-        ctx.restore(); // Restaurar translate cámara
+        ctx.restore(); 
 
-        // Viñeta final
-        if (this.gameTime >= 300) {
+        const darknessStart = this.eclipseMode ? 60 : 300;
+        if (this.gameTime >= darknessStart) {
           ctx.save();
           const grad = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 90, this.canvas.width / 2, this.canvas.height / 2, 400);
           const bgR = isRust ? 19 : 4;
           const bgG = isRust ? 10 : 7;
           const bgB = isRust ? 6 : 17;
+          const maxDark = this.eclipseMode ? 0.99 : 0.96;
+          
           grad.addColorStop(0, `rgba(${bgR}, ${bgG}, ${bgB}, 0)`);
           grad.addColorStop(0.65, `rgba(${bgR}, ${bgG}, ${bgB}, 0.7)`);
-          grad.addColorStop(1, `rgba(${bgR}, ${bgG}, ${bgB}, 0.96)`);
+          grad.addColorStop(1, `rgba(${bgR}, ${bgG}, ${bgB}, ${maxDark})`);
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
           ctx.restore();
