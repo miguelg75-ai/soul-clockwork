@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soul Clockwork: Eclipse - Tactics Update</title>
+  <title>Soul Clockwork: Eclipse - Escenarios Update</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html { width: 100%; height: 100%; overflow: hidden; background-color: #040711; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc; }
@@ -56,10 +56,16 @@
     <div class="modal-card">
       <h1 style="color: #fcd34d; letter-spacing: 2px; font-size: 22px; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);">SOUL CLOCKWORK</h1>
       <div style="font-size: 15px; font-weight: bold; color: #fbbf24;" id="menu-gold-txt">🪙 Oro Total: 0</div>
-      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8;">1. SELECCIONA TU AUTÓMATA (5 CLASES):</div>
+      
+      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 4px;">1. SELECCIONA TU ESCENARIO:</div>
+      <div class="classes-grid" id="maps-container"></div>
+
+      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 8px;">2. SELECCIONA TU AUTÓMATA:</div>
       <div class="classes-grid" id="classes-container"></div>
-      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 4px;">2. MEJORAS PERMANENTES:</div>
+      
+      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 8px;">3. MEJORAS PERMANENTES:</div>
       <div class="talents-list" id="talents-container"></div>
+      
       <button id="btn-start" class="btn btn-green" style="font-size: 16px; margin-top: 4px;">⚔️ INICIAR EXPEDICIÓN</button>
     </div>
   </div>
@@ -90,6 +96,11 @@
   </div>
 
   <script>
+    const MAPS = {
+      ether: { id: 'ether', name: 'Catacumbas de Éter', desc: 'Oscuridad galvánica.', color: '#38bdf8' },
+      rust: { id: 'rust', name: 'Fábrica de Óxido', desc: 'Calor industrial asfixiante.', color: '#f97316' }
+    };
+
     const CLASSES = {
       gunner: { id: 'gunner', name: 'Artillero', weapon: 'brass_revolver', desc: 'Equilibrado (+Cadencia)', hpMod: 0, spdMod: 0, color: '#38bdf8' },
       golem: { id: 'golem', name: 'Gólem', weapon: 'steam_vortex', desc: '+50 HP, +Área, -Vel', hpMod: 50, spdMod: -25, color: '#f97316' },
@@ -172,8 +183,15 @@
       constructor() {
         this.ctx = null; this.masterGain = null; this.bgmGain = null; this.sfxGain = null; this.isMuted = false;
         this.isPlayingBGM = false; this.nextNoteTime = 0; this.step = 0; this.timerID = null;
-        this.scale = [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 246.94, 261.63];
-        this.bassline = [0, 0, 2, 2, 3, 3, 4, 4, 5, 5, 4, 4, 6, 6, 4, 2];
+        this.mapType = 'ether';
+        
+        // Ether (C Minor Harmonic)
+        this.scaleEther = [130.81, 146.83, 155.56, 174.61, 196.00, 207.65, 246.94, 261.63]; 
+        this.basslineEther = [0, 0, 2, 2, 3, 3, 4, 4, 5, 5, 4, 4, 6, 6, 4, 2];
+        
+        // Rust Factory (A Phrygian Dominant - Lower, more industrial)
+        this.scaleRust = [110.00, 116.54, 138.59, 146.83, 164.81, 174.61, 196.00, 220.00]; 
+        this.basslineRust = [0, 0, 0, 1, 0, 0, 3, 1, 0, 0, 0, 1, 4, 3, 1, 0];
       }
       init() {
         if (this.ctx) return;
@@ -184,6 +202,9 @@
         this.bgmGain = this.ctx.createGain(); this.bgmGain.gain.value = 0.18; this.bgmGain.connect(this.masterGain);
         this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.6; this.sfxGain.connect(this.masterGain);
         this.startBGM();
+      }
+      setMap(map) {
+        this.mapType = map;
       }
       toggleMute() {
         this.isMuted = !this.isMuted;
@@ -206,16 +227,26 @@
       }
       playBGMStep(time, step) {
         if (!this.ctx || !this.bgmGain) return;
+        const isRust = this.mapType === 'rust';
+        const scale = isRust ? this.scaleRust : this.scaleEther;
+        const bassline = isRust ? this.basslineRust : this.basslineEther;
+
+        // Kick Drum
         if (step % 4 === 0) {
           const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
-          osc.type = 'triangle'; osc.frequency.setValueAtTime(110, time); osc.frequency.exponentialRampToValueAtTime(30, time + 0.08);
-          g.gain.setValueAtTime(0.5, time); g.gain.linearRampToValueAtTime(0, time + 0.08);
+          osc.type = isRust ? 'square' : 'triangle'; 
+          osc.frequency.setValueAtTime(isRust ? 90 : 110, time); 
+          osc.frequency.exponentialRampToValueAtTime(isRust ? 20 : 30, time + 0.08);
+          g.gain.setValueAtTime(isRust ? 0.4 : 0.5, time); g.gain.linearRampToValueAtTime(0, time + 0.08);
           osc.connect(g); g.connect(this.bgmGain); osc.start(time); osc.stop(time + 0.09);
         }
-        if (step % 2 === 0) {
+        
+        // Bassline Synth
+        if (step % 2 === 0 || (isRust && step % 4 === 3)) {
           const osc = this.ctx.createOscillator(), g = this.ctx.createGain();
-          osc.type = 'sawtooth'; osc.frequency.setValueAtTime(this.scale[this.bassline[step] % this.scale.length] * 0.5, time);
-          g.gain.setValueAtTime(0.3, time); g.gain.exponentialRampToValueAtTime(0.01, time + 0.18);
+          osc.type = isRust ? 'square' : 'sawtooth'; 
+          osc.frequency.setValueAtTime(scale[bassline[step % bassline.length]] * 0.5, time);
+          g.gain.setValueAtTime(isRust ? 0.2 : 0.3, time); g.gain.exponentialRampToValueAtTime(0.01, time + 0.18);
           osc.connect(g); g.connect(this.bgmGain); osc.start(time); osc.stop(time + 0.2);
         }
       }
@@ -604,7 +635,10 @@
         this.puddles = [];
         this.grid = new SpatialGrid(3000, 3000, 64);
         this.chests = [];
+        
+        this.selectedMap = 'ether';
         this.selectedClass = 'gunner';
+        
         this.px = 400; this.py = 300;
         this.maxHp = 100; this.hp = 100;
         this.speed = 175;
@@ -626,9 +660,12 @@
         this.keys = {};
         this.trauma = 0;
         this.nearbyBuf = new Array(128);
+        
         this.initEvents();
         this.resize();
         window.addEventListener('resize', () => this.resize());
+        
+        this.renderMapSelector();
         this.renderClassSelector();
         this.renderTalentsMenu();
         this.start();
@@ -673,11 +710,24 @@
           document.getElementById('btn-toggle-audio').innerText = on ? '🔊 BGM' : '🔇 MUTE';
         };
       }
-      showAlert(txt, color = '#ef4444') {
-        const el = document.getElementById('event-alert');
-        el.innerText = txt; el.style.color = color; el.style.borderColor = color; el.style.display = 'block';
-        setTimeout(() => { el.style.display = 'none'; }, 3200);
+      
+      renderMapSelector() {
+        const container = document.getElementById('maps-container');
+        container.innerHTML = '';
+        Object.keys(MAPS).forEach((k) => {
+          const m = MAPS[k];
+          const card = document.createElement('div');
+          card.className = `class-card ${this.selectedMap === k ? 'selected' : ''}`;
+          card.style.borderColor = this.selectedMap === k ? m.color : '#475569';
+          card.innerHTML = `
+            <div style="font-weight:bold; font-size:12px; color:${m.color};">${m.name}</div>
+            <div style="font-size:10px; color:#cbd5e1;">${m.desc}</div>
+          `;
+          card.onclick = () => { this.selectedMap = k; this.renderMapSelector(); };
+          container.appendChild(card);
+        });
       }
+
       renderClassSelector() {
         const container = document.getElementById('classes-container');
         container.innerHTML = '';
@@ -693,6 +743,7 @@
           container.appendChild(card);
         });
       }
+      
       renderTalentsMenu() {
         document.getElementById('menu-gold-txt').innerText = `🪙 Oro Total: ${this.meta.data.gold}`;
         const list = document.getElementById('talents-container');
@@ -717,6 +768,7 @@
         });
       }
       startRun() {
+        this.audio.setMap(this.selectedMap);
         const stats = this.meta.getStats();
         const cls = CLASSES[this.selectedClass];
         this.maxHp = Math.max(20, stats.maxHp + cls.hpMod);
@@ -1267,12 +1319,16 @@
           const shk = this.trauma * this.trauma * 14;
           ctx.translate((Math.random() * 2 - 1) * shk, (Math.random() * 2 - 1) * shk);
         }
-        ctx.fillStyle = '#060913';
+        
+        const isRust = this.selectedMap === 'rust';
+        ctx.fillStyle = isRust ? '#130a06' : '#060913';
         ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
         ctx.save();
         ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
-        ctx.strokeStyle = 'rgba(30, 41, 59, 0.25)'; ctx.lineWidth = 1;
+        ctx.strokeStyle = isRust ? 'rgba(67, 30, 15, 0.4)' : 'rgba(30, 41, 59, 0.25)'; 
+        ctx.lineWidth = 1;
         const startX = Math.floor((this.px - this.canvas.width / 2) / 64) * 64, startY = Math.floor((this.py - this.canvas.height / 2) / 64) * 64;
         for (let x = startX; x < startX + this.canvas.width + 128; x += 64) {
           ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, startY + this.canvas.height + 128); ctx.stroke();
@@ -1345,9 +1401,12 @@
         if (this.gameTime >= 300) {
           ctx.save();
           const grad = ctx.createRadialGradient(this.canvas.width / 2, this.canvas.height / 2, 90, this.canvas.width / 2, this.canvas.height / 2, 400);
-          grad.addColorStop(0, 'rgba(4, 7, 17, 0)');
-          grad.addColorStop(0.65, 'rgba(4, 7, 17, 0.7)');
-          grad.addColorStop(1, 'rgba(4, 7, 17, 0.96)');
+          const bgR = isRust ? 19 : 4;
+          const bgG = isRust ? 10 : 7;
+          const bgB = isRust ? 6 : 17;
+          grad.addColorStop(0, `rgba(${bgR}, ${bgG}, ${bgB}, 0)`);
+          grad.addColorStop(0.65, `rgba(${bgR}, ${bgG}, ${bgB}, 0.7)`);
+          grad.addColorStop(1, `rgba(${bgR}, ${bgG}, ${bgB}, 0.96)`);
           ctx.fillStyle = grad;
           ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
           ctx.restore();
