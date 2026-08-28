@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Soul Survivor: Dark Fantasy</title>
+  <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0c0a09; font-family: 'Courier New', Courier, monospace; color: #e7e5e4; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0c0a09; font-family: 'Courier Prime', monospace; color: #e7e5e4; }
     #game-canvas { display: block; width: 100vw; height: 100vh; background-color: #1c1917; }
     
     #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 16px; display: none; flex-direction: column; gap: 10px; pointer-events: none; z-index: 10; }
@@ -40,7 +41,7 @@
     .upgrade-card:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0px rgba(0,0,0,0.6); }
     .upgrade-card.evolution { background: #4c0519; border-color: #fbbf24; }
 
-    .btn { padding: 14px 20px; border: 3px solid; font-weight: 700; cursor: pointer; font-size: 16px; font-family: 'Courier New', Courier, monospace; transition: 0.1s; box-shadow: 6px 6px 0px rgba(0,0,0,0.8); }
+    .btn { padding: 14px 20px; border: 3px solid; font-weight: 700; cursor: pointer; font-size: 16px; font-family: 'Courier Prime', monospace; transition: 0.1s; box-shadow: 6px 6px 0px rgba(0,0,0,0.8); }
     .btn:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0px rgba(0,0,0,0.8); }
     
     .btn-gold { background: #ca8a04; color: #fefce8; border-color: #fef08a; }
@@ -63,6 +64,7 @@
       <div class="badge" id="hp-txt" style="color: #4ade80;">❤️ 100</div>
       <div class="badge" id="gold-txt" style="color: #fbbf24;">🪙 0</div>
       <div style="display:flex; gap: 6px;">
+        <div class="badge" id="gp-indicator" style="color: #60a5fa; display: none;" title="Mando Conectado">🎮</div>
         <div class="badge" id="btn-toggle-audio" style="color: #a8a29e;" title="Música">🎵</div>
         <div class="badge" id="btn-pause" style="color: #f87171; border-color: #7f1d1d;" title="Pausar">⏸️</div>
       </div>
@@ -86,7 +88,7 @@
       <div style="text-align: left; font-size: 14px; font-weight: bold; color: #d6d3d1; margin-top: 12px;">2. HÉROE:</div>
       <div class="classes-grid" id="classes-container"></div>
       
-      <div style="text-align: left; font-size: 14px; font-weight: bold; color: #d6d3d1; margin-top: 12px;">3. RELIQUIAS:</div>
+      <div style="text-align: left; font-size: 14px; font-weight: bold; color: #d6d3d1; margin-top: 12px;">3. RELIQUIAS (Mejoras):</div>
       <div class="talents-list" id="talents-container"></div>
       
       <div style="background: #450a0a; border: 2px solid #dc2626; padding: 12px; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;" onclick="document.getElementById('eclipse-toggle').click()">
@@ -399,6 +401,7 @@
         this.weapons = {}; this.passives = {}; this.inputX = 0; this.inputY = 0;
         this.touchActive = false; this.touchOriginX = 0; this.touchOriginY = 0; this.touchCurrentX = 0; this.touchCurrentY = 0;
         this.keys = {}; this.trauma = 0; this.nearbyBuf = new Array(128);
+        this.gpPausePressed = false; this.gpActionPressed = false;
         this.initEvents(); this.resize(); window.addEventListener('resize', () => this.resize());
         this.renderMapSelector(); this.renderClassSelector(); this.renderTalentsMenu(); this.start();
       }
@@ -461,15 +464,85 @@
         this.eventsTriggered = { min2_golem: false, min330_swarm: false, min5_blackout: false, min8_finalboss: false };
         this.isPaused = false; document.getElementById('menu-ui').style.display = 'none'; document.getElementById('hud').style.display = 'flex'; this.updateHUD();
       }
-      start() { let last = performance.now(); const loop = (now) => { const dt = Math.min((now - last) / 1000, 0.1); last = now; if (!this.isPaused) this.update(dt); this.render(dt); requestAnimationFrame(loop); }; requestAnimationFrame(loop); }
+      
+      start() { 
+        let last = performance.now(); 
+        const loop = (now) => { 
+          const dt = Math.min((now - last) / 1000, 0.1); last = now; 
+          
+          const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+          let gpActive = false, gpX = 0, gpY = 0, gpConnected = false;
+          
+          for (let i = 0; i < gamepads.length; i++) {
+            const gp = gamepads[i];
+            if (gp) {
+              gpConnected = true;
+              if (Math.abs(gp.axes[0]) > 0.2) { gpX = gp.axes[0]; gpActive = true; }
+              if (Math.abs(gp.axes[1]) > 0.2) { gpY = gp.axes[1]; gpActive = true; }
+              if (gp.buttons[12] && gp.buttons[12].pressed) { gpY = -1; gpActive = true; }
+              if (gp.buttons[13] && gp.buttons[13].pressed) { gpY = 1; gpActive = true; }
+              if (gp.buttons[14] && gp.buttons[14].pressed) { gpX = -1; gpActive = true; }
+              if (gp.buttons[15] && gp.buttons[15].pressed) { gpX = 1; gpActive = true; }
+              
+              if (gp.buttons[9] && gp.buttons[9].pressed) {
+                if (!this.gpPausePressed) {
+                  this.gpPausePressed = true;
+                  if (this.isPaused) {
+                    if (document.getElementById('pause-ui').style.display !== 'none') document.getElementById('btn-resume').click();
+                  } else {
+                    document.getElementById('btn-pause').click();
+                  }
+                }
+              } else { this.gpPausePressed = false; }
+              
+              if (gp.buttons[0] && gp.buttons[0].pressed) {
+                if (!this.gpActionPressed) {
+                  this.gpActionPressed = true;
+                  if (document.getElementById('levelup-ui').style.display !== 'none') {
+                    const choices = document.getElementById('choices-container').children;
+                    if (choices.length > 0) choices[0].click();
+                  } else if (document.getElementById('chest-ui').style.display !== 'none') {
+                    document.getElementById('btn-claim-chest').click();
+                  } else if (document.getElementById('gameover-ui').style.display !== 'none') {
+                    document.getElementById('btn-back-menu-go').click();
+                  } else if (document.getElementById('menu-ui').style.display !== 'none') {
+                    document.getElementById('btn-start').click();
+                  }
+                }
+              } else { this.gpActionPressed = false; }
+              break;
+            }
+          }
+          
+          const gpInd = document.getElementById('gp-indicator');
+          if (gpConnected) { if(gpInd.style.display === 'none') gpInd.style.display = 'block'; }
+          else { if(gpInd.style.display === 'block') gpInd.style.display = 'none'; }
+          
+          if (!this.isPaused) this.update(dt, gpActive, gpX, gpY); 
+          this.render(dt); 
+          requestAnimationFrame(loop); 
+        }; 
+        requestAnimationFrame(loop); 
+      }
+      
       hitEnemy(e, baseDmg, px, py) {
         const isCrit = Math.random() < (this.selectedClass === 'chronos' ? 0.25 : 0.05); const finalDmg = isCrit ? baseDmg * 2.2 : baseDmg; const dead = e.applyDamage(finalDmg, px, py);
         const txt = this.dmgTextPool.obtain(); if (txt) txt.init(e.x, e.y - e.radius - 4, finalDmg, isCrit);
         if (e.isBoss) this.trauma = Math.min(1.0, this.trauma + (Math.abs(px)>0 ? 0.1 : 0.02)); if (dead) this.killEnemy(e); return dead;
       }
-      update(dt) {
+      
+      update(dt, gpActive, gpX, gpY) {
         this.gameTime += dt; const metaStats = this.meta.getStats(); let ix = 0, iy = 0;
-        if (this.keys['KeyW'] || this.keys['ArrowUp']) iy -= 1; if (this.keys['KeyS'] || this.keys['ArrowDown']) iy += 1; if (this.keys['KeyA'] || this.keys['ArrowLeft']) ix -= 1; if (this.keys['KeyD'] || this.keys['ArrowRight']) ix += 1;
+        
+        if (gpActive) {
+            ix = gpX; iy = gpY;
+        } else {
+            if (this.keys['KeyW'] || this.keys['ArrowUp']) iy -= 1; 
+            if (this.keys['KeyS'] || this.keys['ArrowDown']) iy += 1; 
+            if (this.keys['KeyA'] || this.keys['ArrowLeft']) ix -= 1; 
+            if (this.keys['KeyD'] || this.keys['ArrowRight']) ix += 1;
+        }
+        
         if (ix !== 0 || iy !== 0) { const l = Math.hypot(ix, iy); this.inputX = ix / l; this.inputY = iy / l; } else if (!this.touchActive) { this.inputX = this.inputY = 0; }
         if (this.inputX !== 0 || this.inputY !== 0) { this.facingX = this.inputX; this.facingY = this.inputY; this.px += this.inputX * this.speed * dt; this.py += this.inputY * this.speed * dt; }
         
@@ -603,11 +676,18 @@
         document.getElementById('levelup-ui').style.display = 'flex';
       }
       
+      showAlert(msg) {
+        const el = document.getElementById('event-alert');
+        el.innerText = msg; el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 3000);
+      }
+      
       triggerGameOver(died) {
         this.isPaused = true; const ui = document.getElementById('gameover-ui');
         document.getElementById('go-title').innerText = died ? 'HAS MUERTO' : '🏆 ¡SOBREVIVISTE!'; document.getElementById('go-title').style.color = died ? '#ef4444' : '#22c55e';
         document.getElementById('go-stats').innerHTML = `Tiempo sobrevivido:<br><b style="color:#60a5fa; font-size: 20px;">${this.formatTime(this.gameTime)}</b><br><br>Criaturas purgadas:<br><b style="color:#fca5a5; font-size: 20px;">${this.kills}</b><br><br>Oro extraído:<br><b style="color:#fcd34d; font-size: 20px;">🪙 ${this.runGold}</b>`;
         const btnRevive = document.getElementById('btn-revive'); btnRevive.style.display = (died && !this.hasRevived) ? 'block' : 'none';
+        
         btnRevive.onclick = () => { this.showAd(() => { this.hasRevived = true; this.hp = this.maxHp * 0.5; ui.style.display = 'none'; this.isPaused = false; }); };
         document.getElementById('btn-double').onclick = () => { this.showAd(() => { this.meta.data.gold += this.runGold * 2; this.meta.save(); this.returnToMenu(); }); };
         document.getElementById('btn-back-menu-go').onclick = () => { this.meta.data.gold += this.runGold; this.meta.save(); this.returnToMenu(); };
@@ -640,6 +720,7 @@
         
         ctx.save(); ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
+        // Dibujar baldosas
         ctx.strokeStyle = mDef.bg2; ctx.lineWidth = 2;
         const startX = Math.floor((this.px - this.canvas.width / 2) / 64) * 64, startY = Math.floor((this.py - this.canvas.height / 2) / 64) * 64;
         for (let x = startX; x < startX + this.canvas.width + 128; x += 64) { ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, startY + this.canvas.height + 128); ctx.stroke(); }
@@ -648,6 +729,7 @@
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
         const enemies = this.enemyPool.getActive(); for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
         
+        // Render Player
         ctx.save(); ctx.translate(this.px, this.py); ctx.font = '28px "Courier Prime", monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(CLASSES[this.selectedClass].emj, 0, 0); ctx.restore();
 
         if (this.weapons.aether_furnace) { const areaMult = 1.0 + (this.passives.pressure_boiler || 0) * 0.20 + (this.selectedClass === 'golem' ? 0.20 : 0); const rad = 145 * areaMult; ctx.save(); ctx.beginPath(); ctx.arc(this.px, this.py, rad, 0, Math.PI * 2); ctx.fillStyle = 'rgba(220, 38, 38, 0.15)'; ctx.fill(); ctx.strokeStyle = '#dc2626'; ctx.lineWidth = 2; ctx.stroke(); ctx.restore(); } 
