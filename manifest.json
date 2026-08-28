@@ -1,0 +1,10 @@
+{
+  "name": "Soul Clockwork: Eclipse",
+  "short_name": "SoulClockwork",
+  "description": "Auto-Battler Survival Roguelite",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "background_color": "#040711",
+  "theme_color": "#f59e0b",
+  "orientation": "landscape"
+}
