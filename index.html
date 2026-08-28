@@ -3,42 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soul Clockwork: Eclipse - Nightmare Update</title>
+  <title>Soul Clockwork: Eclipse - Final Polish</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
-    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #040711; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #f8fafc; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #040711; font-family: 'Orbitron', sans-serif; color: #f8fafc; }
     #game-canvas { display: block; width: 100vw; height: 100vh; background-color: #060913; }
     
-    #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 16px; display: none; flex-direction: column; gap: 8px; pointer-events: none; z-index: 10; }
-    .xp-bar-container { width: 100%; height: 12px; background: rgba(15, 23, 42, 0.85); border: 1px solid #38bdf8; border-radius: 6px; overflow: hidden; box-shadow: 0 0 10px rgba(56, 189, 248, 0.3); }
-    .xp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #0284c7, #38bdf8); transition: width 0.1s linear; }
-    .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: bold; }
-    .badge { background: rgba(15, 23, 42, 0.85); padding: 4px 10px; border-radius: 6px; border: 1px solid #334155; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: auto; }
-    #event-alert { position: absolute; top: 18%; left: 50%; transform: translate(-50%, -50%); font-size: 18px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #ef4444; text-shadow: 0 0 14px rgba(239, 68, 68, 0.9); background: rgba(15, 23, 42, 0.9); border: 1px solid #ef4444; padding: 8px 18px; border-radius: 8px; display: none; pointer-events: none; z-index: 20; }
+    #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 12px 16px; display: none; flex-direction: column; gap: 10px; pointer-events: none; z-index: 10; }
+    .xp-bar-container { width: 100%; height: 16px; background: rgba(15, 23, 42, 0.85); border: 2px solid #38bdf8; border-radius: 8px; overflow: hidden; box-shadow: 0 0 15px rgba(56, 189, 248, 0.4); }
+    .xp-bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #0284c7, #38bdf8, #bae6fd); transition: width 0.15s ease-out; }
+    .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: bold; }
+    .badge { background: rgba(15, 23, 42, 0.9); padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; text-shadow: 0 0 6px rgba(0,0,0,0.9); pointer-events: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.5); letter-spacing: 1px; transition: transform 0.2s; }
+    .badge:hover { transform: scale(1.05); cursor: pointer; }
     
-    .ui-layer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(6, 9, 19, 0.94); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
-    .modal-card { background: #0f172a; border: 1px solid #38bdf8; border-radius: 12px; padding: 20px; width: 100%; max-width: 580px; text-align: center; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 10px 35px rgba(2, 132, 199, 0.25); max-height: 94vh; overflow-y: auto; }
-    
-    .classes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; }
-    .class-card { background: #1e293b; border: 2px solid #475569; border-radius: 8px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; text-align: left; transition: 0.15s; }
-    .class-card.selected { border-color: #f59e0b; background: #2e1065; box-shadow: 0 0 12px rgba(245, 158, 11, 0.3); }
-    
-    .talents-list { display: flex; flex-direction: column; gap: 6px; max-height: 22vh; overflow-y: auto; text-align: left; padding-right: 4px; }
-    .talent-row { background: #1e293b; border: 1px solid #334155; border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; }
-    
-    .cards-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-    @media (min-width: 500px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
-    .upgrade-card { background: #1e293b; border: 1px solid #475569; border-radius: 8px; padding: 12px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
-    .upgrade-card.evolution { background: linear-gradient(135deg, #4c1d95, #831843); border: 2px solid #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.5); }
+    #boss-hp-container { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 80%; max-width: 600px; height: 24px; background: rgba(15, 23, 42, 0.9); border: 2px solid #ef4444; border-radius: 4px; display: none; z-index: 15; box-shadow: 0 0 25px rgba(239, 68, 68, 0.6); overflow: hidden; }
+    #boss-hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #7f1d1d, #ef4444, #fca5a5); transition: width 0.1s linear; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); }
+    #boss-name { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); color: #fef08a; font-size: 16px; font-weight: 900; text-shadow: 0 0 10px #ef4444; display: none; z-index: 15; letter-spacing: 3px; white-space: nowrap; }
 
-    .btn { padding: 12px 18px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
-    .btn-gold { background: #eab308; color: #000; box-shadow: 0 0 10px rgba(234, 179, 8, 0.4); }
-    .btn-purple { background: #8b5cf6; color: #fff; }
-    .btn-slate { background: #334155; color: #cbd5e1; }
-    .btn-green { background: #22c55e; color: #000; box-shadow: 0 0 12px rgba(34, 197, 94, 0.4); }
+    #event-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); font-size: 22px; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; color: #ef4444; text-shadow: 0 0 20px rgba(239, 68, 68, 1); background: rgba(15, 23, 42, 0.95); border: 2px solid #ef4444; padding: 12px 24px; border-radius: 8px; display: none; pointer-events: none; z-index: 20; box-shadow: 0 0 30px rgba(239, 68, 68, 0.4); }
+    
+    .ui-layer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(4, 7, 17, 0.96); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+    
+    .modal-card { background: linear-gradient(180deg, #0f172a 0%, #020617 100%); border: 2px solid #38bdf8; border-radius: 16px; padding: 24px; width: 100%; max-width: 600px; text-align: center; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 15px 50px rgba(2, 132, 199, 0.3), inset 0 0 20px rgba(56, 189, 248, 0.1); max-height: 94vh; overflow-y: auto; }
+    
+    .classes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+    .class-card { background: rgba(30, 41, 59, 0.8); border: 2px solid #475569; border-radius: 10px; padding: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-align: left; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+    .class-card:hover { transform: translateY(-3px); border-color: #94a3b8; box-shadow: 0 8px 20px rgba(0,0,0,0.4); }
+    .class-card.selected { border-color: #f59e0b; background: linear-gradient(135deg, #2e1065, #4c1d95); box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); }
+    
+    .talents-list { display: flex; flex-direction: column; gap: 8px; max-height: 25vh; overflow-y: auto; text-align: left; padding-right: 6px; }
+    .talent-row { background: rgba(30, 41, 59, 0.8); border: 1px solid #334155; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
+    .talent-row:hover { background: rgba(51, 65, 85, 0.9); }
+    
+    .cards-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 500px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
+    .upgrade-card { background: rgba(30, 41, 59, 0.9); border: 2px solid #475569; border-radius: 10px; padding: 14px; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 6px; transition: all 0.2s ease; }
+    .upgrade-card:hover { transform: scale(1.03); border-color: #38bdf8; box-shadow: 0 0 20px rgba(56, 189, 248, 0.3); }
+    .upgrade-card.evolution { background: linear-gradient(135deg, #4c1d95, #9f1239); border: 2px solid #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.6); }
+
+    .btn { padding: 14px 20px; border: none; border-radius: 8px; font-weight: 900; cursor: pointer; font-size: 15px; letter-spacing: 1px; text-transform: uppercase; transition: all 0.2s ease; font-family: 'Orbitron', sans-serif; pointer-events: auto; }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.15); box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
+    .btn:active { transform: translateY(1px); }
+    .btn-gold { background: linear-gradient(180deg, #facc15, #eab308); color: #422006; box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); }
+    .btn-purple { background: linear-gradient(180deg, #a855f7, #7e22ce); color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+    .btn-slate { background: linear-gradient(180deg, #475569, #334155); color: #f8fafc; }
+    .btn-green { background: linear-gradient(180deg, #4ade80, #22c55e); color: #064e3b; box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); font-size: 18px; }
+    
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 4px; }
   </style>
 </head>
 <body>
+  <!-- HUD PRINCIPAL -->
   <div id="hud">
     <div class="xp-bar-container"><div id="xp-fill" class="xp-bar-fill"></div></div>
     <div class="stats-row">
@@ -46,57 +64,99 @@
       <div class="badge" id="time-txt" style="color: #fcd34d;">00:00</div>
       <div class="badge" id="hp-txt" style="color: #4ade80;">HP 100/100</div>
       <div class="badge" id="gold-txt" style="color: #fbbf24;">🪙 0</div>
-      <div class="badge" id="btn-toggle-audio" style="cursor: pointer;">🔊 BGM</div>
+      <div style="display:flex; gap: 6px;">
+        <div class="badge" id="btn-toggle-audio" style="color: #cbd5e1;" title="Música">🔊</div>
+        <div class="badge" id="btn-pause" style="color: #fca5a5; border-color: #ef4444;" title="Pausar">⏸️</div>
+      </div>
     </div>
   </div>
+  
+  <!-- UI DEL JEFE FINAL -->
+  <div id="boss-hp-container"><div id="boss-hp-fill"></div></div>
+  <div id="boss-name">ARCHIMAGO MECÁNICO</div>
+
   <div id="event-alert">⚠️ ALERTA DE OLEADA</div>
   <canvas id="game-canvas"></canvas>
   
+  <!-- MENÚ PRINCIPAL -->
   <div id="menu-ui" class="ui-layer">
     <div class="modal-card">
-      <h1 style="color: #fcd34d; letter-spacing: 2px; font-size: 22px; text-shadow: 0 0 10px rgba(251, 191, 36, 0.5);">SOUL CLOCKWORK</h1>
-      <div style="font-size: 15px; font-weight: bold; color: #fbbf24;" id="menu-gold-txt">🪙 Oro Total: 0</div>
+      <h1 style="color: #fcd34d; letter-spacing: 4px; font-size: 28px; text-shadow: 0 0 20px rgba(251, 191, 36, 0.6); margin-bottom: 5px;">SOUL CLOCKWORK</h1>
+      <div style="font-size: 16px; font-weight: 900; color: #fbbf24; text-shadow: 0 0 8px rgba(245, 158, 11, 0.5);" id="menu-gold-txt">🪙 ORO TOTAL: 0</div>
       
-      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 4px;">1. SELECCIONA TU ESCENARIO:</div>
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #cbd5e1; margin-top: 8px;">1. SELECCIONA ESCENARIO:</div>
       <div class="classes-grid" id="maps-container"></div>
 
-      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 8px;">2. SELECCIONA TU AUTÓMATA:</div>
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #cbd5e1; margin-top: 12px;">2. CHASIS DE COMBATE:</div>
       <div class="classes-grid" id="classes-container"></div>
       
-      <div style="text-align: left; font-size: 12px; font-weight: bold; color: #94a3b8; margin-top: 8px;">3. MEJORAS PERMANENTES:</div>
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #cbd5e1; margin-top: 12px;">3. TALLER DE MEJORAS:</div>
       <div class="talents-list" id="talents-container"></div>
       
-      <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; padding: 10px; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 0 8px rgba(239,68,68,0.3);" onclick="document.getElementById('eclipse-toggle').click()">
-        <input type="checkbox" id="eclipse-toggle" style="pointer-events: none; width: 16px; height: 16px; accent-color: #ef4444;">
-        <span style="color: #fca5a5; font-weight: bold; font-size: 13px; text-shadow: 0 0 5px #ef4444;">🔥 MODO ECLIPSE (Enemigos x2, Oro x3)</span>
+      <div style="background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 8px; padding: 12px; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.2)';" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)';" onclick="document.getElementById('eclipse-toggle').click()">
+        <input type="checkbox" id="eclipse-toggle" style="pointer-events: none; width: 18px; height: 18px; accent-color: #ef4444;">
+        <span style="color: #fca5a5; font-weight: 900; font-size: 14px; text-shadow: 0 0 8px #ef4444; letter-spacing: 1px;">🔥 MODO ECLIPSE (Difícil x2)</span>
       </div>
       
-      <button id="btn-start" class="btn btn-green" style="font-size: 16px; margin-top: 8px;">⚔️ INICIAR EXPEDICIÓN</button>
+      <div style="display: flex; gap: 10px; margin-top: 12px;">
+        <button id="btn-start" class="btn btn-green" style="flex: 2;">INICIAR EXPEDICIÓN</button>
+        <button id="btn-open-save" class="btn btn-slate" style="flex: 1; font-size: 12px;" title="Exportar/Importar Partida">💾 DATOS</button>
+      </div>
     </div>
   </div>
 
+  <!-- PANTALLA PAUSA -->
+  <div id="pause-ui" class="ui-layer" style="display: none; z-index: 200;">
+    <div class="modal-card">
+      <h2 style="color: #38bdf8; font-size: 24px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.6); letter-spacing: 2px;">SISTEMA PAUSADO</h2>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;">
+        <button id="btn-resume" class="btn btn-green">▶ CONTINUAR</button>
+        <button id="btn-quit" class="btn btn-slate">⏹ VOLVER AL TALLER (Abandonar)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANTALLA EXPORTAR/IMPORTAR DATOS -->
+  <div id="save-ui" class="ui-layer" style="display: none; z-index: 200;">
+    <div class="modal-card">
+      <h2 style="color: #fcd34d; font-size: 20px;">💾 DATOS DEL NÚCLEO</h2>
+      <p style="font-size: 12px; color: #94a3b8; line-height: 1.5;">Copia este código para respaldar tu partida en otro dispositivo, o pega un código existente y dale a Cargar.</p>
+      <textarea id="save-data-text" style="width:100%; height: 90px; background: #020617; color: #38bdf8; border: 1px solid #475569; border-radius: 6px; padding: 10px; font-family: monospace; font-size: 11px; resize: none; margin-top: 10px; word-break: break-all;"></textarea>
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 15px;">
+        <button id="btn-copy-save" class="btn btn-gold" style="flex:1;">📋 COPIAR</button>
+        <button id="btn-load-save" class="btn btn-purple" style="flex:1;">⬇️ CARGAR</button>
+      </div>
+      <button id="btn-close-save" class="btn btn-slate" style="margin-top: 8px;">CERRAR</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA SUBIDA DE NIVEL -->
   <div id="levelup-ui" class="ui-layer" style="display: none;">
     <div class="modal-card">
-      <h2 style="color: #fcd34d;">¡SUBIDA DE NIVEL!</h2>
+      <h2 style="color: #38bdf8; font-size: 24px; text-shadow: 0 0 15px rgba(56, 189, 248, 0.6); letter-spacing: 2px;">SISTEMA ACTUALIZADO</h2>
       <div id="choices-container" class="cards-grid"></div>
     </div>
   </div>
 
+  <!-- PANTALLA COFRE -->
   <div id="chest-ui" class="ui-layer" style="display: none;">
-    <div class="modal-card" style="border: 2px solid #f59e0b; box-shadow: 0 0 25px rgba(245, 158, 11, 0.4);">
-      <h2 style="color: #fbbf24;">🎁 ¡COFRE DE ÉTER!</h2>
-      <div id="chest-rewards" style="display: flex; flex-direction: column; gap: 6px;"></div>
-      <button id="btn-claim-chest" class="btn btn-gold" style="margin-top: 8px;">¡EQUIPAR RECOMPENSAS!</button>
+    <div class="modal-card" style="border: 2px solid #f59e0b; box-shadow: 0 0 40px rgba(245, 158, 11, 0.5);">
+      <h2 style="color: #fbbf24; font-size: 24px; text-shadow: 0 0 20px rgba(245, 158, 11, 0.8);">🎁 ¡COFRE DE ÉTER!</h2>
+      <div id="chest-rewards" style="display: flex; flex-direction: column; gap: 8px; margin: 10px 0;"></div>
+      <button id="btn-claim-chest" class="btn btn-gold">EQUIPAR RECOMPENSAS</button>
     </div>
   </div>
 
+  <!-- PANTALLA GAME OVER -->
   <div id="gameover-ui" class="ui-layer" style="display: none;">
     <div class="modal-card">
-      <h2 id="go-title" style="color: #ef4444;">NÚCLEO DESTRUIDO</h2>
-      <p id="go-stats" style="color: #94a3b8; font-size: 14px; line-height: 1.5;"></p>
-      <button id="btn-revive" class="btn btn-purple">📺 Revivir con 50% HP (Ad)</button>
-      <button id="btn-double" class="btn btn-gold">📺 Multiplicar Oro x2 (Ad)</button>
-      <button id="btn-back-menu" class="btn btn-slate">Volver al Taller</button>
+      <h2 id="go-title" style="color: #ef4444; font-size: 28px; text-shadow: 0 0 20px rgba(239, 68, 68, 0.8);">NÚCLEO DESTRUIDO</h2>
+      <div id="go-stats" style="color: #cbd5e1; font-size: 16px; line-height: 1.8; background: rgba(15,23,42,0.6); padding: 15px; border-radius: 8px; border: 1px solid #334155;"></div>
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+        <button id="btn-revive" class="btn btn-purple">📺 REVIVIR 50% HP (AD)</button>
+        <button id="btn-double" class="btn btn-gold">📺 ORO x2 (AD)</button>
+        <button id="btn-back-menu-go" class="btn btn-slate">VOLVER AL TALLER</button>
+      </div>
     </div>
   </div>
 
@@ -135,11 +195,11 @@
     ];
 
     const EVOLUTIONS = {
-      soul_gatling: { id: 'soul_gatling', name: '🔥 GATLING DE ALMAS', baseWeapon: 'brass_revolver', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN! Cadencia ametralladora con perforación infinita.' },
-      aether_furnace: { id: 'aether_furnace', name: '⚡ HORNO DE ÉTER', baseWeapon: 'steam_vortex', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN! Aura colosal de plasma azul abrasador.' },
-      tesla_judgement: { id: 'tesla_judgement', name: '👑 JUICIO DE TESLA', baseWeapon: 'galvanic_strike', reqPassive: 'cobalt_magnet', desc: '¡EVOLUCIÓN! Tormenta eléctrica ininterrumpida.' },
-      plague_deluge: { id: 'plague_deluge', name: '☣️ DILUVIO DE PESTE', baseWeapon: 'acid_flask', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN! Erupción ácida masiva que desintegra hordas.' },
-      thorn_vortex: { id: 'thorn_vortex', name: '⛓️ VÓRTICE DE ESPINAS', baseWeapon: 'aether_chains', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN! Cadenas titánicas permanentes que trituran en 360°.' }
+      soul_gatling: { id: 'soul_gatling', name: '🔥 GATLING DE ALMAS', baseWeapon: 'brass_revolver', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN! Cadencia ametralladora.' },
+      aether_furnace: { id: 'aether_furnace', name: '⚡ HORNO DE ÉTER', baseWeapon: 'steam_vortex', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN! Aura colosal de plasma azul.' },
+      tesla_judgement: { id: 'tesla_judgement', name: '👑 JUICIO DE TESLA', baseWeapon: 'galvanic_strike', reqPassive: 'cobalt_magnet', desc: '¡EVOLUCIÓN! Tormenta eléctrica infinita.' },
+      plague_deluge: { id: 'plague_deluge', name: '☣️ DILUVIO DE PESTE', baseWeapon: 'acid_flask', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN! Erupción ácida masiva.' },
+      thorn_vortex: { id: 'thorn_vortex', name: '⛓️ VÓRTICE DE ESPINAS', baseWeapon: 'aether_chains', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN! Cadenas titánicas permanentes.' }
     };
 
     class MetaManager {
@@ -158,6 +218,21 @@
       }
       save() { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data)); }
       defaultData() { return { gold: 0, talents: { vitality: 0, might: 0, swiftness: 0, magnetism: 0 } }; }
+      
+      // NUEVO: Funciones para Exportar/Importar
+      exportData() { return btoa(JSON.stringify(this.data)); }
+      importData(str) { 
+        try { 
+          const parsed = JSON.parse(atob(str)); 
+          if(parsed && parsed.talents !== undefined) {
+             this.data = parsed; 
+             this.save(); 
+             return true; 
+          }
+          return false;
+        } catch(e) { return false; } 
+      }
+
       getCost(id) {
         const def = TALENT_DEFS[id], rank = this.data.talents[id] || 0;
         if (rank >= def.maxRank) return Infinity;
@@ -380,10 +455,10 @@
         ctx.globalAlpha = alpha;
         ctx.translate(this.x, this.y);
         ctx.scale(scale, scale);
-        ctx.font = this.isCrit ? '900 14px sans-serif' : 'bold 12px sans-serif';
+        ctx.font = this.isCrit ? '900 16px "Orbitron", sans-serif' : 'bold 12px "Orbitron", sans-serif';
         ctx.fillStyle = this.isCrit ? '#fde047' : '#e2e8f0';
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2.5;
+        ctx.lineWidth = 3;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.strokeText(this.text, 0, 0);
@@ -595,12 +670,6 @@
           ctx.fillStyle = '#fef08a'; ctx.beginPath(); ctx.arc(-10, -6, 4, 0, Math.PI * 2); ctx.arc(10, -6, 4, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
-        
-        if (this.isBoss) {
-          const barW = this.isFinalBoss ? 90 : 60, barH = 7;
-          ctx.fillStyle = 'rgba(0,0,0,0.75)'; ctx.fillRect(this.x - barW / 2, this.y - this.radius - 16, barW, barH);
-          ctx.fillStyle = this.isFinalBoss ? '#c084fc' : '#ef4444'; ctx.fillRect(this.x - barW / 2, this.y - this.radius - 16, barW * (this.hp / this.maxHp), barH);
-        }
       }
     }
 
@@ -722,13 +791,61 @@
         const resetTouch = () => { this.touchActive = false; this.inputX = this.inputY = 0; };
         window.addEventListener('pointerup', resetTouch);
         window.addEventListener('pointercancel', resetTouch);
+        
         document.getElementById('btn-start').onclick = () => {
           this.audio.init();
           this.startRun();
         };
         document.getElementById('btn-toggle-audio').onclick = () => {
           const on = this.audio.toggleMute();
-          document.getElementById('btn-toggle-audio').innerText = on ? '🔊 BGM' : '🔇 MUTE';
+          const btn = document.getElementById('btn-toggle-audio');
+          btn.innerText = on ? '🔊' : '🔇';
+          btn.style.color = on ? '#cbd5e1' : '#ef4444';
+        };
+
+        // EVENTOS DE PAUSA Y QoL
+        document.getElementById('btn-pause').onclick = () => {
+          if(this.isPaused) return;
+          this.isPaused = true;
+          document.getElementById('pause-ui').style.display = 'flex';
+        };
+        document.getElementById('btn-resume').onclick = () => {
+          this.isPaused = false;
+          document.getElementById('pause-ui').style.display = 'none';
+        };
+        document.getElementById('btn-quit').onclick = () => {
+          this.isPaused = false;
+          document.getElementById('pause-ui').style.display = 'none';
+          this.triggerGameOver(true);
+        };
+
+        // EVENTOS DE GUARDADO (CROSS-SAVE)
+        document.getElementById('btn-open-save').onclick = () => {
+          document.getElementById('save-data-text').value = this.meta.exportData();
+          document.getElementById('save-ui').style.display = 'flex';
+        };
+        document.getElementById('btn-close-save').onclick = () => {
+          document.getElementById('save-ui').style.display = 'none';
+        };
+        document.getElementById('btn-copy-save').onclick = () => {
+          const ta = document.getElementById('save-data-text');
+          ta.select();
+          if (navigator.clipboard) {
+              navigator.clipboard.writeText(ta.value).then(() => alert('¡Partida copiada al portapapeles!'));
+          } else {
+              document.execCommand('copy');
+              alert('¡Partida copiada al portapapeles!');
+          }
+        };
+        document.getElementById('btn-load-save').onclick = () => {
+          const ta = document.getElementById('save-data-text');
+          if(this.meta.importData(ta.value)) {
+            alert('¡Partida sincronizada y cargada con éxito!');
+            this.renderTalentsMenu();
+            document.getElementById('save-ui').style.display = 'none';
+          } else {
+            alert('Error: Código inválido o corrupto.');
+          }
         };
       }
       
@@ -739,10 +856,13 @@
           const m = MAPS[k];
           const card = document.createElement('div');
           card.className = `class-card ${this.selectedMap === k ? 'selected' : ''}`;
-          card.style.borderColor = this.selectedMap === k ? m.color : '#475569';
+          if(this.selectedMap === k) {
+             card.style.borderColor = m.color;
+             card.style.boxShadow = `0 0 15px ${m.color}66`;
+          }
           card.innerHTML = `
-            <div style="font-weight:bold; font-size:12px; color:${m.color};">${m.name}</div>
-            <div style="font-size:10px; color:#cbd5e1;">${m.desc}</div>
+            <div style="font-weight:900; font-size:14px; color:${m.color}; letter-spacing:1px;">${m.name}</div>
+            <div style="font-size:11px; color:#cbd5e1;">${m.desc}</div>
           `;
           card.onclick = () => { this.selectedMap = k; this.renderMapSelector(); };
           container.appendChild(card);
@@ -757,8 +877,8 @@
           const card = document.createElement('div');
           card.className = `class-card ${this.selectedClass === k ? 'selected' : ''}`;
           card.innerHTML = `
-            <div style="font-weight:bold; font-size:12px; color:#fcd34d;">${c.name}</div>
-            <div style="font-size:10px; color:#cbd5e1;">${c.desc}</div>
+            <div style="font-weight:900; font-size:13px; color:#fcd34d; letter-spacing:1px;">${c.name}</div>
+            <div style="font-size:10px; color:#94a3b8;">${c.desc}</div>
           `;
           card.onclick = () => { this.selectedClass = k; this.renderClassSelector(); };
           container.appendChild(card);
@@ -766,7 +886,7 @@
       }
       
       renderTalentsMenu() {
-        document.getElementById('menu-gold-txt').innerText = `🪙 Oro Total: ${this.meta.data.gold}`;
+        document.getElementById('menu-gold-txt').innerText = `🪙 ORO TOTAL: ${this.meta.data.gold}`;
         const list = document.getElementById('talents-container');
         list.innerHTML = '';
         Object.keys(TALENT_DEFS).forEach((id) => {
@@ -775,10 +895,10 @@
           row.className = 'talent-row';
           row.innerHTML = `
             <div style="display:flex; flex-direction:column;">
-              <span style="font-weight:bold; font-size:12px; color:#fcd34d;">${def.name} (${rank}/${def.maxRank})</span>
-              <span style="font-size:10px; color:#94a3b8;">${def.desc}</span>
+              <span style="font-weight:900; font-size:12px; color:#fcd34d; letter-spacing:0.5px;">${def.name} (${rank}/${def.maxRank})</span>
+              <span style="font-size:10px; color:#94a3b8; margin-top:2px;">${def.desc}</span>
             </div>
-            <button class="btn btn-gold" style="padding: 6px 10px; font-size: 11px;" ${isMax || this.meta.data.gold < cost ? 'disabled' : ''}>
+            <button class="btn btn-gold" style="padding: 6px 12px; font-size: 11px; font-weight: bold;" ${isMax || this.meta.data.gold < cost ? 'disabled' : ''}>
               ${isMax ? 'MÁX' : `🪙 ${cost}`}
             </button>
           `;
@@ -855,14 +975,14 @@
         const sec = this.gameTime;
         if (sec >= 120 && !this.eventsTriggered.min2_golem) {
           this.eventsTriggered.min2_golem = true;
-          this.showAlert('⚠️ MINIBOSS: GÓLEM DE VAPOR', '#ef4444');
+          this.showAlert('⚠️ GÓLEM DE VAPOR', '#ef4444');
           const boss = this.enemyPool.obtain();
           if (boss) boss.init(99, this.px + 400, this.py, 1.0, this.eclipseMode);
           this.trauma = 0.8;
         }
         if (sec >= 210 && !this.eventsTriggered.min330_swarm) {
           this.eventsTriggered.min330_swarm = true;
-          this.showAlert('🌀 ¡ENJAMBRE DE RATAS EN ANILLO!', '#a855f7');
+          this.showAlert('🌀 ¡ENJAMBRE DE RATAS!', '#a855f7');
           for (let i = 0; i < 70; i++) {
             const angle = (i / 70) * Math.PI * 2;
             const rat = this.enemyPool.obtain();
@@ -872,7 +992,7 @@
         }
         if (sec >= 300 && !this.eventsTriggered.min5_blackout) {
           this.eventsTriggered.min5_blackout = true;
-          this.showAlert('🌑 APAGÓN DE ÉTER: CULTISTAS ACECHAN', '#eab308');
+          this.showAlert('🌑 APAGÓN DE ÉTER', '#eab308');
           for (let i = 0; i < 8; i++) {
             const angle = Math.random() * Math.PI * 2;
             const c = this.enemyPool.obtain();
@@ -882,7 +1002,7 @@
         }
         if (sec >= 480 && !this.eventsTriggered.min8_finalboss) {
           this.eventsTriggered.min8_finalboss = true;
-          this.showAlert('👑 ¡JEFE FINAL: EL ARCHIMAGO MECÁNICO!', '#c084fc');
+          this.showAlert('👑 ¡ARCHIMAGO MECÁNICO!', '#c084fc');
           const finalBoss = this.enemyPool.obtain();
           if (finalBoss) finalBoss.init(100, this.px + 450, this.py, 1.5, this.eclipseMode);
           this.trauma = 1.0;
@@ -1274,7 +1394,7 @@
           card.className = `upgrade-card ${c.isEvo ? 'evolution' : ''}`;
           if (c.isEvo) {
             card.innerHTML = `
-              <div style="font-weight:900; color:#fde047; font-size:13px;">${c.name}</div>
+              <div style="font-weight:900; color:#fde047; font-size:13px; text-transform: uppercase;">${c.name}</div>
               <div style="font-size:11px; color:#fef08a;">${c.desc}</div>
             `;
             card.onclick = () => {
@@ -1287,7 +1407,7 @@
           } else {
             const lvl = c.isPass ? (this.passives[c.id] || 0) + 1 : (this.weapons[c.id] || 0) + 1;
             card.innerHTML = `
-              <div style="font-weight:bold; color:#fcd34d; font-size:13px;">${c.name} (Nv. ${lvl})</div>
+              <div style="font-weight:bold; color:#38bdf8; font-size:13px;">${c.name} <span style="color:#fcd34d;">(Nv. ${lvl})</span></div>
               <div style="font-size:11px; color:#cbd5e1;">${c.desc}</div>
             `;
             card.onclick = () => {
@@ -1307,7 +1427,7 @@
         const ui = document.getElementById('gameover-ui');
         document.getElementById('go-title').innerText = died ? 'NÚCLEO DESTRUIDO' : '🏆 ¡VICTORIA! ECLIPSE COMPLETADO';
         document.getElementById('go-title').style.color = died ? '#ef4444' : '#22c55e';
-        document.getElementById('go-stats').innerHTML = `Tiempo: <b>${this.formatTime(this.gameTime)}</b><br>Espectros: <b>${this.kills}</b><br>Oro de expedición: <b>🪙 ${this.runGold}</b>`;
+        document.getElementById('go-stats').innerHTML = `Tiempo sobrevivido:<br><b style="color:#38bdf8; font-size: 20px;">${this.formatTime(this.gameTime)}</b><br><br>Espectros purgados:<br><b style="color:#fca5a5; font-size: 20px;">${this.kills}</b><br><br>Oro extraído:<br><b style="color:#fcd34d; font-size: 20px;">🪙 ${this.runGold}</b>`;
         const btnRevive = document.getElementById('btn-revive');
         btnRevive.style.display = (died && !this.hasRevived) ? 'block' : 'none';
         btnRevive.onclick = () => {
@@ -1321,7 +1441,7 @@
           this.meta.save();
           this.returnToMenu();
         };
-        document.getElementById('btn-back-menu').onclick = () => {
+        document.getElementById('btn-back-menu-go').onclick = () => {
           this.meta.data.gold += this.runGold;
           this.meta.save();
           this.returnToMenu();
@@ -1332,6 +1452,8 @@
       returnToMenu() {
         document.getElementById('gameover-ui').style.display = 'none';
         document.getElementById('hud').style.display = 'none';
+        document.getElementById('boss-hp-container').style.display = 'none';
+        document.getElementById('boss-name').style.display = 'none';
         document.getElementById('menu-ui').style.display = 'flex';
         this.renderTalentsMenu();
       }
@@ -1342,6 +1464,24 @@
         document.getElementById('time-txt').innerText = this.formatTime(this.gameTime);
         document.getElementById('hp-txt').innerText = `HP ${Math.ceil(this.hp)}/${this.maxHp}`;
         document.getElementById('gold-txt').innerText = `🪙 ${this.runGold}`;
+        
+        let boss = null;
+        const enemies = this.enemyPool.getActive();
+        for(let i=0; i<enemies.length; i++) {
+            if(enemies[i].active && enemies[i].isBoss) { boss = enemies[i]; break; }
+        }
+        
+        const bossCont = document.getElementById('boss-hp-container');
+        const bossName = document.getElementById('boss-name');
+        if(boss) {
+            bossCont.style.display = 'block';
+            bossName.style.display = 'block';
+            bossName.innerText = boss.isFinalBoss ? '👑 EL ARCHIMAGO MECÁNICO 👑' : '⚠️ GÓLEM DE VAPOR ⚠️';
+            document.getElementById('boss-hp-fill').style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
+        } else {
+            bossCont.style.display = 'none';
+            bossName.style.display = 'none';
+        }
       }
       
       formatTime(s) {
