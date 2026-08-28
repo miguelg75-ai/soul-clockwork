@@ -164,100 +164,61 @@
     // ==========================================
     // SISTEMA DE CARGA DE ASSETS Y SPRITESHEETS
     // ==========================================
-
-    // Generador procedural de Spritesheet de prueba (Para evitar CORS offline)
-    // En un juego real, esto no va; simplemente cargas un .png
     function generateKnightSheet() {
-      const c = document.createElement('canvas');
-      c.width = 128; c.height = 32; // 4 fotogramas de 32x32 px
-      const ctx = c.getContext('2d');
-      
+      const c = document.createElement('canvas'); c.width = 128; c.height = 32; const ctx = c.getContext('2d');
       const drawFrame = (ox, oy) => {
-        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(ox+16, oy+28, 10, 3, 0, 0, Math.PI*2); ctx.fill(); // Sombra
-        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(ox+6, oy+14, 10, 14); // Capa
-        ctx.fillStyle = '#374151'; ctx.fillRect(ox+10, oy+14, 12, 12); // Cuerpo
-        ctx.fillStyle = '#9ca3af'; ctx.fillRect(ox+8, oy+4, 16, 12); // Casco
-        ctx.fillStyle = '#111827'; ctx.fillRect(ox+8, oy+8, 10, 4); // Visor
-        ctx.fillStyle = '#ef4444'; ctx.fillRect(ox+12, oy+8, 4, 4); // Ojo rojo brillante
-        ctx.fillStyle = '#d1d5db'; ctx.fillRect(ox+22, oy+8, 4, 18); // Espada
-        ctx.fillStyle = '#fbbf24'; ctx.fillRect(ox+20, oy+18, 8, 2); // Guarda de la espada
+        ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(ox+16, oy+28, 10, 3, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#7f1d1d'; ctx.fillRect(ox+6, oy+14, 10, 14); ctx.fillStyle = '#374151'; ctx.fillRect(ox+10, oy+14, 12, 12);
+        ctx.fillStyle = '#9ca3af'; ctx.fillRect(ox+8, oy+4, 16, 12); ctx.fillStyle = '#111827'; ctx.fillRect(ox+8, oy+8, 10, 4);
+        ctx.fillStyle = '#ef4444'; ctx.fillRect(ox+12, oy+8, 4, 4); ctx.fillStyle = '#d1d5db'; ctx.fillRect(ox+22, oy+8, 4, 18);
+        ctx.fillStyle = '#fbbf24'; ctx.fillRect(ox+20, oy+18, 8, 2);
       };
-
-      drawFrame(0, 0);   // Fotograma 0: Idle 1
-      drawFrame(32, 2);  // Fotograma 1: Idle 2 (Respirando abajo)
-      drawFrame(64, -2); // Fotograma 2: Corriendo 1 (Salto arriba)
-      drawFrame(96, 2);  // Fotograma 3: Corriendo 2 (Aterrizaje abajo)
-      
-      return c.toDataURL();
+      drawFrame(0, 0); drawFrame(32, 2); drawFrame(64, -2); drawFrame(96, 2); return c.toDataURL();
     }
 
-    // 1. EL CARGADOR DE ASSETS (ASSET LOADER)
-    const ASSETS = { images: {}, loaded: 0, total: 1 };
+    function generateMonsterSheet(c1, c2, isFlying) {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 32; const ctx = c.getContext('2d');
+      const drawFrame = (ox, oy, frame) => {
+        ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(ox+16,28,10,3,0,0,Math.PI*2); ctx.fill();
+        if(isFlying) {
+          ctx.fillStyle = c1; ctx.fillRect(ox+12, oy+12, 8, 8); ctx.fillStyle = c2;
+          if(frame%2===0) { ctx.beginPath(); ctx.moveTo(ox+12, oy+14); ctx.lineTo(ox+2, oy+6); ctx.lineTo(ox+6, oy+16); ctx.fill(); ctx.beginPath(); ctx.moveTo(ox+20, oy+14); ctx.lineTo(ox+30, oy+6); ctx.lineTo(ox+26, oy+16); ctx.fill(); } 
+          else { ctx.beginPath(); ctx.moveTo(ox+12, oy+14); ctx.lineTo(ox+2, oy+22); ctx.lineTo(ox+6, oy+18); ctx.fill(); ctx.beginPath(); ctx.moveTo(ox+20, oy+14); ctx.lineTo(ox+30, oy+22); ctx.lineTo(ox+26, oy+18); ctx.fill(); }
+          ctx.fillStyle = '#ef4444'; ctx.fillRect(ox+14, oy+14, 2,2);
+        } else {
+          ctx.fillStyle = c1; ctx.fillRect(ox+10, oy+8, 12, 12); ctx.fillStyle = c2; ctx.fillRect(ox+8, oy+14, 16, 6);
+          ctx.fillStyle = c1; ctx.fillRect(ox+12, oy+20, 8, 8); // patas
+          ctx.fillStyle = '#000'; ctx.fillRect(ox+12, oy+12, 2,2); ctx.fillRect(ox+18, oy+12, 2,2);
+        }
+      };
+      drawFrame(0,0,0); drawFrame(32, isFlying?-3:2, 1); drawFrame(64,0, 2); drawFrame(96, isFlying?3:-2, 3); return c.toDataURL();
+    }
+
+    const ASSETS = { images: {}, loaded: 0, total: 5 };
     function loadAssets(callback) {
-      const img = new Image();
-      
-      // AQUÍ IRÍA TU RUTA REAL EN EL FUTURO:
-      // img.src = './assets/caballero.png';
-      
-      img.src = generateKnightSheet(); 
-      img.onload = () => { 
-        ASSETS.images['knight'] = img; 
-        ASSETS.loaded++; 
-        if (ASSETS.loaded === ASSETS.total) callback(); 
-      };
+      const check = () => { ASSETS.loaded++; if (ASSETS.loaded === ASSETS.total) callback(); };
+      const i1 = new Image(); i1.onload = check; i1.src = generateKnightSheet(); ASSETS.images['knight'] = i1;
+      const i2 = new Image(); i2.onload = check; i2.src = generateMonsterSheet('#4c1d95', '#7c3aed', true); ASSETS.images['bat'] = i2;
+      const i3 = new Image(); i3.onload = check; i3.src = generateMonsterSheet('#14532d', '#166534', false); ASSETS.images['zombie'] = i3;
+      const i4 = new Image(); i4.onload = check; i4.src = generateMonsterSheet('#e5e7eb', '#9ca3af', false); ASSETS.images['skeleton'] = i4;
+      const i5 = new Image(); i5.onload = check; i5.src = generateMonsterSheet('#7f1d1d', '#dc2626', false); ASSETS.images['boss'] = i5;
     }
 
-    // 2. EL ANIMADOR (STATE MACHINE)
     class SpriteAnimator {
       constructor(imageKey, frameWidth, frameHeight) {
-        this.imageKey = imageKey;
-        this.w = frameWidth;
-        this.h = frameHeight;
-        this.timer = 0;
-        this.frame = 0;
-        this.state = 'idle'; // 'idle' o 'run'
-        this.fps = 8; // Cuadros por segundo
+        this.imageKey = imageKey; this.w = frameWidth; this.h = frameHeight;
+        this.timer = 0; this.frame = 0; this.state = 'idle'; this.fps = 8;
       }
-
       update(dt, isMoving) {
         const newState = isMoving ? 'run' : 'idle';
-        if (this.state !== newState) {
-          this.state = newState;
-          this.frame = 0; // Reiniciar animación al cambiar de estado
-          this.timer = 0;
-        }
-        
-        this.timer += dt;
-        if (this.timer >= 1 / this.fps) {
-          this.timer = 0;
-          this.frame = (this.frame + 1) % 2; // Alternar entre 2 fotogramas (0 y 1)
-        }
+        if (this.state !== newState) { this.state = newState; this.frame = 0; this.timer = 0; }
+        this.timer += dt; if (this.timer >= 1 / this.fps) { this.timer = 0; this.frame = (this.frame + 1) % 2; }
       }
-
       render(ctx, x, y, facingX) {
-        const img = ASSETS.images[this.imageKey];
-        if (!img) return;
-        
-        // Calcular índice base: Si es idle usa los cuadros 0 y 1. Si es run, usa 2 y 3.
-        let frameIndex = this.frame;
-        if (this.state === 'run') frameIndex += 2; 
-        
-        ctx.save();
-        ctx.translate(x, y);
-        
-        // Magia de Espejo: Voltear el Canvas si miramos a la izquierda
-        if (facingX < 0) ctx.scale(-1, 1);
-        
-        // 3. EL RECORTE MÁGICO (ctx.drawImage)
-        // Dibuja desde la imagen 'img'
-        // sx, sy, sw, sh (Recorte de la hoja fuente)
-        // dx, dy, dw, dh (Destino en la pantalla)
-        ctx.drawImage(
-          img, 
-          frameIndex * this.w, 0, this.w, this.h, // Recorte
-          -this.w/2, -this.h/2 - 8, this.w, this.h  // Posición destino (centrado y un poco arriba)
-        );
-        
+        const img = ASSETS.images[this.imageKey]; if (!img) return;
+        let frameIndex = this.frame; if (this.state === 'run') frameIndex += 2; 
+        ctx.save(); ctx.translate(x, y); if (facingX < 0) ctx.scale(-1, 1);
+        ctx.drawImage(img, frameIndex * this.w, 0, this.w, this.h, -this.w/2, -this.h/2 - 8, this.w, this.h);
         ctx.restore();
       }
     }
@@ -269,15 +230,11 @@
     };
 
     const CLASSES = {
-      gunner: { id: 'gunner', name: 'Arquero', weapon: 'brass_revolver', desc: 'Disparo rápido', hpMod: 0, spdMod: 0, emj: '🏹' },
-      golem: { id: 'golem', name: 'Caballero', weapon: 'steam_vortex', desc: 'Aura de Daño', hpMod: 50, spdMod: -25, emj: '🛡️' },
-      chronos: { id: 'chronos', name: 'Ladrón', weapon: 'galvanic_strike', desc: 'Críticos altos', hpMod: -25, spdMod: 35, emj: '🗡️' },
-      alchemist: { id: 'alchemist', name: 'Brujo', weapon: 'acid_flask', desc: 'Charcos veneno', hpMod: 10, spdMod: 0, emj: '🧙‍♂️' },
-      sentinel: { id: 'sentinel', name: 'Clérigo', weapon: 'aether_chains', desc: 'Armas giratorias', hpMod: 35, spdMod: -15, emj: '🧔‍♂️' }
-    };
-
-    const E_SPRITES = {
-      0: '🦇', 1: '🧟', 2: '💀', 3: '🐺', 4: '🧛', 5: '👻', 6: '🧌', 99: '👹', 100: '🐲'
+      gunner: { id: 'gunner', name: 'Arquero', weapon: 'brass_revolver', desc: 'Disparo rápido', hpMod: 0, spdMod: 0 },
+      golem: { id: 'golem', name: 'Caballero', weapon: 'steam_vortex', desc: 'Aura de Daño', hpMod: 50, spdMod: -25 },
+      chronos: { id: 'chronos', name: 'Ladrón', weapon: 'galvanic_strike', desc: 'Críticos altos', hpMod: -25, spdMod: 35 },
+      alchemist: { id: 'alchemist', name: 'Brujo', weapon: 'acid_flask', desc: 'Charcos veneno', hpMod: 10, spdMod: 0 },
+      sentinel: { id: 'sentinel', name: 'Clérigo', weapon: 'aether_chains', desc: 'Armas giratorias', hpMod: 35, spdMod: -15 }
     };
 
     const TALENT_DEFS = {
@@ -411,21 +368,20 @@
     }
 
     class Enemy {
-      constructor() { this.active = false; this.x = 0; this.y = 0; this.hp = 20; this.maxHp = 20; this.speed = 85; this.radius = 12; this.damage = 8; this.kx = 0; this.ky = 0; this.type = 0; this.isBoss = false; this.isFinalBoss = false; this.shootTimer = 0; this.flashTimer = 0; this.animTimer = 0; this.isKamikaze = false; this.isShielded = false; this.facing = 0; }
+      constructor() { this.active = false; this.x = 0; this.y = 0; this.hp = 20; this.maxHp = 20; this.speed = 85; this.radius = 12; this.damage = 8; this.kx = 0; this.ky = 0; this.type = 0; this.isBoss = false; this.isFinalBoss = false; this.shootTimer = 0; this.flashTimer = 0; this.animTimer = 0; this.isKamikaze = false; this.isShielded = false; this.facing = 0; this.animator = null; }
       reset() { this.kx = this.ky = 0; this.isBoss = false; this.isFinalBoss = false; this.shootTimer = 0; this.flashTimer = 0; this.isKamikaze = false; this.isShielded = false; this.facing = 0; }
       init(type, x, y, diff, eclipseMode = false) {
         this.x = x; this.y = y; this.type = type; this.isBoss = false; this.isFinalBoss = false;
-        if (type === 0) { this.maxHp = 16 * diff; this.speed = 95; this.radius = 12; this.damage = 6; }
-        else if (type === 1) { this.maxHp = 70 * diff; this.speed = 45; this.radius = 16; this.damage = 14; }
-        else if (type === 2) { this.maxHp = 35 * diff; this.speed = 65; this.radius = 14; this.damage = 10; }
-        else if (type === 3) { this.maxHp = 24 * diff; this.speed = 120; this.radius = 14; this.damage = 8; }
-        else if (type === 4) { this.maxHp = 45 * diff; this.speed = 55; this.radius = 14; this.damage = 10; }
-        else if (type === 5) { this.maxHp = 18 * diff; this.speed = 150; this.radius = 12; this.damage = 30; this.isKamikaze = true; } 
-        else if (type === 6) { this.maxHp = 130 * diff; this.speed = 35; this.radius = 18; this.damage = 15; this.isShielded = true; }
-        else if (type === 99) { this.isBoss = true; this.maxHp = 650 * diff; this.speed = 52; this.radius = 32; this.damage = 25; }
-        else if (type === 100) { this.isFinalBoss = true; this.isBoss = true; this.maxHp = 1800 * diff; this.speed = 65; this.radius = 36; this.damage = 30; }
+        
+        let sprKey = 'zombie';
+        if (type === 0 || type === 5) { this.maxHp = 16 * diff; this.speed = 95 + (type===5?55:0); this.radius = 12; this.damage = type===5?30:6; this.isKamikaze = (type===5); sprKey = 'bat'; }
+        else if (type === 2 || type === 6) { this.maxHp = 35 * diff; this.speed = 65; this.radius = 14; this.damage = 10; this.isShielded = (type===6); sprKey = 'skeleton'; }
+        else if (type === 99 || type === 100) { this.isBoss = true; this.isFinalBoss = (type===100); this.maxHp = (type===100?1800:650) * diff; this.speed = type===100?65:52; this.radius = 32; this.damage = 30; sprKey = 'boss'; }
+        else { this.maxHp = 70 * diff; this.speed = 45; this.radius = 16; this.damage = 14; sprKey = 'zombie'; }
+        
         if (eclipseMode) { this.maxHp *= 2; this.speed *= 1.35; this.damage *= 1.5; }
         this.hp = this.maxHp;
+        this.animator = new SpriteAnimator(sprKey, 32, 32);
       }
       applyDamage(amt, px, py) {
         if (this.isShielded && (px !== 0 || py !== 0)) { const projAngle = Math.atan2(py, px); const diffAng = Math.abs(projAngle - this.facing); const diffNorm = Math.min((2 * Math.PI) - diffAng, diffAng); if (diffNorm > 1.8) { amt *= 0.15; this.flashTimer = 0.08; } }
@@ -444,16 +400,19 @@
         }
         this.x += ((dx / dist) * this.speed + this.kx) * dt; this.y += ((dy / dist) * this.speed + this.ky) * dt;
         if (this.flashTimer > 0) this.flashTimer -= dt;
+        if (this.animator) this.animator.update(dt, true);
       }
       render(ctx) {
         if (!this.active) return;
         ctx.save(); ctx.translate(this.x, this.y);
-        if(!this.isBoss) { ctx.rotate(Math.sin(this.animTimer) * 0.15); }
         if (this.flashTimer > 0) { ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, this.radius + 2, 0, Math.PI * 2); ctx.fill(); ctx.restore(); return; }
-        ctx.font = (this.isBoss ? (this.isFinalBoss ? '60px' : '45px') : '22px') + ' "Courier Prime"';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(E_SPRITES[this.type], 0, 0);
-        if(this.isShielded) { ctx.rotate(this.facing); ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 0, 18, -Math.PI/2.5, Math.PI/2.5); ctx.stroke(); }
+        
+        const scale = this.isBoss ? (this.isFinalBoss ? 2.5 : 2.0) : 1.2;
+        ctx.scale(scale, scale);
+        
+        if (this.animator) this.animator.render(ctx, 0, 0, Math.cos(this.facing));
+        
+        if(this.isShielded) { ctx.rotate(this.facing); ctx.strokeStyle = '#9ca3af'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, 12, -Math.PI/2.5, Math.PI/2.5); ctx.stroke(); }
         ctx.restore();
       }
     }
@@ -508,10 +467,8 @@
         this.initEvents(); this.resize(); window.addEventListener('resize', () => this.resize());
         this.renderMapSelector(); this.renderClassSelector(); this.renderTalentsMenu(); 
         
-        // Inicializamos nuestro nuevo Animador (32x32 píxeles)
         this.playerAnimator = new SpriteAnimator('knight', 32, 32);
         
-        // Cargamos los assets ANTES de iniciar el juego
         loadAssets(() => {
           this.start();
         });
@@ -850,6 +807,7 @@
         
         ctx.save(); ctx.translate(this.canvas.width / 2 - this.px, this.canvas.height / 2 - this.py);
         
+        // Dibujar baldosas
         ctx.strokeStyle = mDef.bg2; ctx.lineWidth = 2;
         const startX = Math.floor((this.px - this.canvas.width / 2) / 64) * 64, startY = Math.floor((this.py - this.canvas.height / 2) / 64) * 64;
         for (let x = startX; x < startX + this.canvas.width + 128; x += 64) { ctx.beginPath(); ctx.moveTo(x, startY); ctx.lineTo(x, startY + this.canvas.height + 128); ctx.stroke(); }
@@ -858,9 +816,6 @@
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
         const enemies = this.enemyPool.getActive(); for (let i = 0; i < enemies.length; i++) enemies[i].render(ctx);
         
-        // ==========================================
-        // Render Player (SISTEMA DE SPRITESHEETS)
-        // ==========================================
         ctx.save();
         const isMoving = (this.inputX !== 0 || this.inputY !== 0);
         this.playerAnimator.update(dt, isMoving);
