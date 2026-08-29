@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Soul Survivor: Dark Fantasy - Balance Update</title>
+  <title>Soul Survivor: Dark Fantasy - Terrain & Modifiers</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
     body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0c0a09; font-family: 'Courier New', Courier, monospace; color: #e7e5e4; }
@@ -23,7 +23,7 @@
     #event-alert { position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; font-weight: 700; letter-spacing: 2px; color: #f87171; text-shadow: 3px 3px 0px #450a0a; background: rgba(28, 25, 23, 0.95); border: 4px solid #7f1d1d; padding: 16px 32px; display: none; pointer-events: none; z-index: 20; box-shadow: 8px 8px 0px rgba(0,0,0,0.8); }
     
     .ui-layer { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(12, 10, 9, 0.9); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
-    .modal-card { background: #1c1917; border: 4px solid #57534e; padding: 24px; width: 100%; max-width: 600px; text-align: center; display: flex; flex-direction: column; gap: 14px; box-shadow: 10px 10px 0px rgba(0,0,0,0.8); max-height: 94vh; overflow-y: auto; }
+    .modal-card { background: #1c1917; border: 4px solid #57534e; padding: 24px; width: 100%; max-width: 620px; text-align: center; display: flex; flex-direction: column; gap: 14px; box-shadow: 10px 10px 0px rgba(0,0,0,0.8); max-height: 94vh; overflow-y: auto; }
     
     .classes-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
     .class-card { background: #292524; border: 2px solid #44403c; padding: 10px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; text-align: left; transition: 0.1s; box-shadow: 4px 4px 0px rgba(0,0,0,0.5); position: relative; }
@@ -34,6 +34,9 @@
     
     .talents-list { display: flex; flex-direction: column; gap: 8px; max-height: 25vh; overflow-y: auto; text-align: left; padding-right: 6px; }
     .talent-row { background: #292524; border: 2px solid #44403c; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; }
+    
+    .modifiers-panel { display: flex; flex-direction: column; gap: 8px; background: #292524; border: 2px solid #57534e; padding: 12px; text-align: left; }
+    .mod-item { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; font-weight: bold; }
     
     .cards-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
     @media (min-width: 500px) { .cards-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -48,10 +51,6 @@
     .btn-purple { background: #7e22ce; color: #fff; border-color: #d8b4fe; }
     .btn-slate { background: #44403c; color: #f8fafc; border-color: #78716c; }
     .btn-green { background: #166534; color: #f0fdf4; border-color: #86efac; font-size: 18px; }
-    
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: #1c1917; }
-    ::-webkit-scrollbar-thumb { background: #57534e; border: 1px solid #1c1917; }
   </style>
 </head>
 <body>
@@ -76,19 +75,35 @@
   
   <div id="menu-ui" class="ui-layer">
     <div class="modal-card">
-      <h1 style="color: #fde047; font-size: 32px; text-shadow: 4px 4px 0px #713f12; margin-bottom: 5px;">SOUL SURVIVOR</h1>
-      <div style="font-size: 16px; font-weight: 700; color: #fbbf24;" id="menu-gold-txt">🪙 ORO ACUMULADO: 0</div>
-      <div style="text-align: left; font-size: 14px; font-weight: bold; color: #d6d3d1; margin-top: 8px;">1. TERRITORIO:</div>
+      <h1 style="color: #fde047; font-size: 30px; text-shadow: 4px 4px 0px #713f12; margin-bottom: 2px;">SOUL SURVIVOR</h1>
+      <div style="font-size: 15px; font-weight: 700; color: #fbbf24;" id="menu-gold-txt">🪙 ORO ACUMULADO: 0</div>
+      
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #d6d3d1; margin-top: 6px;">1. TERRITORIO:</div>
       <div class="classes-grid" id="maps-container"></div>
-      <div style="text-align: left; font-size: 14px; font-weight: bold; color: #d6d3d1; margin-top: 12px;">2. HÉROE:</div>
+      
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #d6d3d1; margin-top: 8px;">2. HÉROE:</div>
       <div class="classes-grid" id="classes-container"></div>
-      <div style="text-align: left; font-size: 14px; font-weight: bold; color: #d6d3d1; margin-top: 12px;">3. RELIQUIAS:</div>
-      <div class="talents-list" id="talents-container"></div>
-      <div style="background: #450a0a; border: 2px solid #dc2626; padding: 12px; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer;" onclick="document.getElementById('eclipse-toggle').click()">
-        <input type="checkbox" id="eclipse-toggle" style="pointer-events: none; width: 18px; height: 18px; accent-color: #dc2626;">
-        <span style="color: #fca5a5; font-weight: 700; font-size: 14px;">🩸 MODO PESADILLA (Difícil x2)</span>
+      
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #d6d3d1; margin-top: 8px;">3. MODIFICADORES DE RUN:</div>
+      <div class="modifiers-panel">
+        <label class="mod-item" style="color: #fca5a5;">
+          <input type="checkbox" id="eclipse-toggle" style="width: 16px; height: 16px; accent-color: #dc2626;">
+          🩸 MODO PESADILLA (Enemigos x2 HP / Daño, Oro x3)
+        </label>
+        <label class="mod-item" style="color: #93c5fd;">
+          <input type="checkbox" id="hyper-toggle" style="width: 16px; height: 16px; accent-color: #3b82f6;">
+          ⚡ MODO HIPERVELOCIDAD (+25% Vel Héroe/Armas, +30% Vel Horda)
+        </label>
+        <label class="mod-item" style="color: #fde047;">
+          <input type="checkbox" id="swarm-toggle" style="width: 16px; height: 16px; accent-color: #eab308;">
+          💀 HORDAS DOBLES (Doble spawn de monstruos)
+        </label>
       </div>
-      <div style="display: flex; gap: 10px; margin-top: 12px;">
+
+      <div style="text-align: left; font-size: 13px; font-weight: bold; color: #d6d3d1; margin-top: 8px;">4. RELIQUIAS PERMANENTES:</div>
+      <div class="talents-list" id="talents-container"></div>
+
+      <div style="display: flex; gap: 10px; margin-top: 10px;">
         <button id="btn-start" class="btn btn-green" style="flex: 2;">ADENTRARSE</button>
         <button id="btn-open-save" class="btn btn-slate" style="flex: 1; font-size: 12px;">💾 DATOS</button>
       </div>
@@ -96,12 +111,12 @@
   </div>
 
   <div id="pause-ui" class="ui-layer" style="display: none; z-index: 200;"><div class="modal-card"><h2 style="color: #d6d3d1; font-size: 28px;">⏸️ PAUSA</h2><div style="display: flex; flex-direction: column; gap: 12px; margin-top: 15px;"><button id="btn-resume" class="btn btn-green">CONTINUAR</button><button id="btn-quit" class="btn btn-slate">HUIDA COBARDE</button></div></div></div>
-  <div id="save-ui" class="ui-layer" style="display: none; z-index: 200;"><div class="modal-card"><h2 style="color: #fcd34d; font-size: 20px;">💾 PERGAMINO DE ALMAS</h2><p style="font-size: 12px; color: #a8a29e; line-height: 1.5;">Copia este código para respaldar tu partida.</p><textarea id="save-data-text" style="width:100%; height: 90px; background: #0c0a09; color: #d6d3d1; border: 2px solid #57534e; padding: 10px; font-family: monospace; font-size: 12px; resize: none; margin-top: 10px; word-break: break-all;"></textarea><div style="display: flex; gap: 8px; justify-content: center; margin-top: 15px;"><button id="btn-copy-save" class="btn btn-gold" style="flex:1;">📋 COPIAR</button><button id="btn-load-save" class="btn btn-purple" style="flex:1;">⬇️ CARGAR</button></div><button id="btn-close-save" class="btn btn-slate" style="margin-top: 8px;">CERRAR</button></div></div>
-  <div id="levelup-ui" class="ui-layer" style="display: none;"><div class="modal-card"><h2 style="color: #60a5fa; font-size: 28px; text-shadow: 3px 3px 0px #1e3a8a;">SUBIDA DE NIVEL</h2><div id="choices-container" class="cards-grid"></div></div></div>
-  <div id="chest-ui" class="ui-layer" style="display: none;"><div class="modal-card" style="border-color: #fbbf24;"><h2 style="color: #fbbf24; font-size: 28px; text-shadow: 3px 3px 0px #713f12;">🎁 COFRE ENCONTRADO</h2><div id="chest-rewards" style="display: flex; flex-direction: column; gap: 8px; margin: 10px 0;"></div><button id="btn-claim-chest" class="btn btn-gold">TOMAR BOTÍN</button></div></div>
-  <div id="gameover-ui" class="ui-layer" style="display: none;"><div class="modal-card"><h2 id="go-title" style="color: #ef4444; font-size: 32px; text-shadow: 4px 4px 0px #450a0a;">HAS MUERTO</h2><div id="go-stats" style="color: #e7e5e4; font-size: 16px; line-height: 1.8; background: #292524; padding: 15px; border: 2px solid #57534e;"></div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;"><button id="btn-revive" class="btn btn-purple">📺 POCIÓN DE RESURRECCIÓN (AD)</button><button id="btn-double" class="btn btn-gold">📺 DUPLICAR ORO (AD)</button><button id="btn-back-menu-go" class="btn btn-slate">VOLVER AL CAMPAMENTO</button></div></div></div>
+  <div id="save-ui" class="ui-layer" style="display: none; z-index: 200;"><div class="modal-card"><h2 style="color: #fcd34d; font-size: 20px;">💾 PERGAMINO DE ALMAS</h2><textarea id="save-data-text" style="width:100%; height: 90px; background: #0c0a09; color: #d6d3d1; border: 2px solid #57534e; padding: 10px; font-family: monospace; font-size: 12px; resize: none; margin-top: 10px; word-break: break-all;"></textarea><div style="display: flex; gap: 8px; justify-content: center; margin-top: 15px;"><button id="btn-copy-save" class="btn btn-gold" style="flex:1;">📋 COPIAR</button><button id="btn-load-save" class="btn btn-purple" style="flex:1;">⬇️ CARGAR</button></div><button id="btn-close-save" class="btn btn-slate" style="margin-top: 8px;">CERRAR</button></div></div>
+  <div id="levelup-ui" class="ui-layer" style="display: none;"><div class="modal-card"><h2 style="color: #60a5fa; font-size: 28px;">SUBIDA DE NIVEL</h2><div id="choices-container" class="cards-grid"></div></div></div>
+  <div id="chest-ui" class="ui-layer" style="display: none;"><div class="modal-card" style="border-color: #fbbf24;"><h2 style="color: #fbbf24; font-size: 28px;">🎁 COFRE ENCONTRADO</h2><div id="chest-rewards" style="display: flex; flex-direction: column; gap: 8px; margin: 10px 0;"></div><button id="btn-claim-chest" class="btn btn-gold">TOMAR BOTÍN</button></div></div>
+  <div id="gameover-ui" class="ui-layer" style="display: none;"><div class="modal-card"><h2 id="go-title" style="color: #ef4444; font-size: 32px;">HAS MUERTO</h2><div id="go-stats" style="color: #e7e5e4; font-size: 16px; line-height: 1.8; background: #292524; padding: 15px; border: 2px solid #57534e;"></div><div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;"><button id="btn-revive" class="btn btn-purple">📺 POCIÓN DE RESURRECCIÓN (AD)</button><button id="btn-double" class="btn btn-gold">📺 DUPLICAR ORO (AD)</button><button id="btn-back-menu-go" class="btn btn-slate">VOLVER AL CAMPAMENTO</button></div></div></div>
   <div id="ad-ui" class="ui-layer" style="display: none; z-index: 300; background: #000;"><div class="modal-card" style="border-color: #a855f7;"><h2 style="color: #c084fc; font-size: 24px;">📺 MAGIA COMERCIAL</h2><p style="color: #94a3b8; font-size: 14px; margin: 10px 0;">Observando visión del mercader...</p><div style="font-size: 48px; font-weight: 900; color: #f8fafc; margin: 20px 0;" id="ad-timer">5</div></div></div>
-  <div id="achievement-toast" style="position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #4c0519; border: 3px solid #fbbf24; padding: 12px 24px; z-index: 999; display: flex; align-items: center; gap: 12px; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 25px rgba(0,0,0,0.8); pointer-events: none;"><div style="font-size: 32px;">🔓</div><div style="display: flex; flex-direction: column; text-align: left;"><span style="color: #fde047; font-weight: bold; font-size: 14px;">¡NUEVO DESBLOQUEO!</span><span id="toast-desc" style="color: #d6d3d1; font-size: 12px;">El Caballero está disponible</span></div></div>
+  <div id="achievement-toast" style="position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: #4c0519; border: 3px solid #fbbf24; padding: 12px 24px; z-index: 999; display: flex; align-items: center; gap: 12px; transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 25px rgba(0,0,0,0.8); pointer-events: none;"><div style="font-size: 32px;">🔓</div><div style="display: flex; flex-direction: column; text-align: left;"><span style="color: #fde047; font-weight: bold; font-size: 14px;">¡NUEVO DESBLOQUEO!</span><span id="toast-desc" style="color: #d6d3d1; font-size: 12px;"></span></div></div>
 
   <script>
     function generateMonsterSheet(c1, c2, f) {
@@ -133,11 +148,9 @@
     function loadAssets(cb) {
       const ch = () => { ASSETS.loaded++; if (ASSETS.loaded === ASSETS.total) cb(); };
       const l = (k, src) => {
-        const i = new Image();
-        i.onload = ch;
-        i.onerror = () => { console.warn(`Asset ${src} no encontrado. Continuando.`); ch(); };
-        i.src = src;
-        ASSETS.images[k] = i;
+        const i = new Image(); i.onload = ch;
+        i.onerror = () => { console.warn(`Asset ${src} fallback.`); ch(); };
+        i.src = src; ASSETS.images[k] = i;
       };
       l('knight', './assets/img/knight.png');
       l('bat', generateMonsterSheet('#4c1d95', '#7c3aed', true));
@@ -159,12 +172,9 @@
       render(ctx, x, y, fx) {
         const i = ASSETS.images[this.k];
         if (!i || !i.width) return;
-        const w = i.width / this.frames;
-        const h = i.height;
-        let fi = this.f;
-        if (this.s === 'run') fi += 2;
-        ctx.save();
-        ctx.translate(x, y);
+        const w = i.width / this.frames, h = i.height;
+        let fi = this.f; if (this.s === 'run') fi += 2;
+        ctx.save(); ctx.translate(x, y);
         if (fx < 0) ctx.scale(-1, 1);
         ctx.drawImage(i, fi * w, 0, w, h, -w / 2, -h / 2 - 12, w, h);
         ctx.restore();
@@ -200,15 +210,15 @@
       { id: 'cobalt_magnet', name: 'Orbe Atracción', isPass: true, desc: '+30% Radio.', maxLvl: 5 }
     ];
     const EVOLUTIONS = {
-      soul_gatling: { id: 'soul_gatling', name: '🩸 MIL DAGAS', baseWeapon: 'brass_revolver', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN! Cadencia implacable con perforación absoluta.' },
-      aether_furnace: { id: 'aether_furnace', name: '🔥 INFIERNO', baseWeapon: 'steam_vortex', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN! Tormenta abrasadora que reduce armadura.' },
-      tesla_judgement: { id: 'tesla_judgement', name: '⚡ CÓLERA', baseWeapon: 'galvanic_strike', reqPassive: 'cobalt_magnet', desc: '¡EVOLUCIÓN! Rayos encadenados con aturdimiento masivo.' },
-      plague_deluge: { id: 'plague_deluge', name: '☠️ PESTE', baseWeapon: 'acid_flask', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN! Charcos corrosivos gigantes con daño porcentual.' },
-      thorn_vortex: { id: 'thorn_vortex', name: '📖 VÍSPERAS', baseWeapon: 'aether_chains', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN! Libros orbitales que repelen ataques hostiles.' }
+      soul_gatling: { id: 'soul_gatling', name: '🩸 MIL DAGAS', baseWeapon: 'brass_revolver', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN!' },
+      aether_furnace: { id: 'aether_furnace', name: '🔥 INFIERNO', baseWeapon: 'steam_vortex', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN!' },
+      tesla_judgement: { id: 'tesla_judgement', name: '⚡ CÓLERA', baseWeapon: 'galvanic_strike', reqPassive: 'cobalt_magnet', desc: '¡EVOLUCIÓN!' },
+      plague_deluge: { id: 'plague_deluge', name: '☠️ PESTE', baseWeapon: 'acid_flask', reqPassive: 'volatile_oil', desc: '¡EVOLUCIÓN!' },
+      thorn_vortex: { id: 'thorn_vortex', name: '📖 VÍSPERAS', baseWeapon: 'aether_chains', reqPassive: 'pressure_boiler', desc: '¡EVOLUCIÓN!' }
     };
 
     class MetaManager {
-      constructor() { this.STORAGE_KEY = 'SOUL_SURVIVOR_SAVE_V10'; this.data = this.load(); }
+      constructor() { this.STORAGE_KEY = 'SOUL_SURVIVOR_SAVE_V11'; this.data = this.load(); }
       load() { try { const raw = localStorage.getItem(this.STORAGE_KEY); if (!raw) return this.defaultData(); const d = JSON.parse(raw); if (!d.talents) d.talents = {}; if (!d.unlocks) d.unlocks = { gunner: true, ether: true }; return d; } catch { return this.defaultData(); } }
       save() { localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.data)); }
       defaultData() { return { gold: 0, talents: {}, unlocks: { gunner: true, ether: true } }; }
@@ -239,8 +249,7 @@
       }
       init() {
         if (this.ctx) return;
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
+        const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
         this.ctx = new AC();
         this.masterGain = this.ctx.createGain(); this.masterGain.gain.value = 0.35; this.masterGain.connect(this.ctx.destination);
         this.bgmGain = this.ctx.createGain(); this.bgmGain.gain.value = 0.18; this.bgmGain.connect(this.masterGain);
@@ -274,8 +283,7 @@
         const bl = iR ? this.basslineRust : this.basslineEther;
         if (s % 4 === 0) {
           const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-          o.type = iR ? 'square' : 'triangle';
-          o.frequency.setValueAtTime(iR ? 90 : 110, t);
+          o.type = iR ? 'square' : 'triangle'; o.frequency.setValueAtTime(iR ? 90 : 110, t);
           o.frequency.exponentialRampToValueAtTime(iR ? 20 : 30, t + 0.08);
           g.gain.setValueAtTime(iR ? 0.4 : 0.5, t); g.gain.linearRampToValueAtTime(0, t + 0.08);
           o.connect(g); g.connect(this.bgmGain); o.start(t); o.stop(t + 0.09);
@@ -391,6 +399,44 @@
       }
     }
 
+    // ==========================================
+    // SISTEMA DE OBSTÁCULOS E INTERACTIVOS (PIEDRA / COFRES)
+    // ==========================================
+    class MapObstacle {
+      constructor(x, y, type = 'pillar') {
+        this.x = x; this.y = y; this.type = type; // 'pillar' | 'break_chest'
+        this.radius = type === 'pillar' ? 22 : 16;
+        this.hp = type === 'pillar' ? 999999 : 35;
+        this.maxHp = this.hp;
+        this.active = true;
+      }
+      applyDamage(amt) {
+        if (this.type === 'pillar') return false;
+        this.hp -= amt;
+        return this.hp <= 0;
+      }
+      render(ctx) {
+        if (!this.active) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        if (this.type === 'pillar') {
+          ctx.fillStyle = '#0c0a09'; ctx.beginPath(); ctx.arc(0, 4, this.radius, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = '#57534e'; ctx.fillRect(-18, -26, 36, 48);
+          ctx.fillStyle = '#78716c'; ctx.fillRect(-14, -22, 28, 40);
+          ctx.strokeStyle = '#292524'; ctx.lineWidth = 3; ctx.strokeRect(-18, -26, 36, 48);
+        } else {
+          ctx.fillStyle = '#451a03'; ctx.fillRect(-14, -12, 28, 24);
+          ctx.strokeStyle = '#d97706'; ctx.lineWidth = 2; ctx.strokeRect(-14, -12, 28, 24);
+          ctx.fillStyle = '#fbbf24'; ctx.fillRect(-4, -4, 8, 8);
+          if (this.hp < this.maxHp) {
+            ctx.fillStyle = '#000'; ctx.fillRect(-14, -18, 28, 4);
+            ctx.fillStyle = '#22c55e'; ctx.fillRect(-14, -18, 28 * (this.hp / this.maxHp), 4);
+          }
+        }
+        ctx.restore();
+      }
+    }
+
     class DamageText {
       constructor() { this.active = false; this.x = 0; this.y = 0; this.l = 0; this.ml = 0.5; this.t = ''; this.ic = false; }
       reset() { this.l = 0; }
@@ -496,7 +542,7 @@
         this.kx = 0; this.ky = 0; this.t = 0; this.ib = false; this.ifb = false; this.st = 0; this.ft = 0; this.at = 0; this.ik = false; this.ish = false; this.fa = 0; this.an = null;
       }
       reset() { this.kx = this.ky = 0; this.ib = false; this.ifb = false; this.st = 0; this.ft = 0; this.ik = false; this.ish = false; this.fa = 0; }
-      init(t, x, y, df, em = false) {
+      init(t, x, y, df, em = false, hm = false) {
         this.x = x; this.y = y; this.t = t; this.ib = false; this.ifb = false; let sk = 'zombie';
         if (t === 0 || t === 5) {
           this.mhp = 18 * df; this.sp = 100 + (t === 5 ? 50 : 0); this.radius = 12; this.dmg = t === 5 ? 28 : 6; this.ik = (t === 5); sk = 'bat';
@@ -508,6 +554,7 @@
           this.mhp = 85 * df; this.sp = 48; this.radius = 16; this.dmg = 14; sk = 'zombie';
         }
         if (em) { this.mhp *= 2.0; this.sp *= 1.3; this.dmg *= 1.5; }
+        if (hm) { this.sp *= 1.30; }
         this.hp = this.mhp;
         this.an = new SpriteAnimator(sk, 4);
       }
@@ -602,8 +649,11 @@
         this.audio = new AudioEngine(); this.meta = new MetaManager();
         this.projPool = new ObjectPool(() => new Projectile(), 600); this.enemyPool = new ObjectPool(() => new Enemy(), 900);
         this.gemPool = new ObjectPool(() => new Gem(), 600); this.sparkPool = new ObjectPool(() => new BloodDrop(), 1500); this.dmgTextPool = new ObjectPool(() => new DamageText(), 800);
-        this.puddles = []; this.grid = new SpatialGrid(64); this.chests = [];
-        this.selectedMap = 'ether'; this.selectedClass = 'gunner'; this.eclipseMode = false;
+        this.puddles = []; this.grid = new SpatialGrid(64); this.chests = []; this.obstacles = [];
+        
+        this.selectedMap = 'ether'; this.selectedClass = 'gunner';
+        this.eclipseMode = false; this.hyperMode = false; this.swarmMode = false;
+        
         this.px = 400; this.py = 300; this.maxHp = 100; this.hp = 100; this.speed = 175; this.facingX = 1; this.facingY = 0;
         this.shootTimer = 0; this.vortexTimer = 0; this.teslaTimer = 0; this.gearTimer = 0; this.acidTimer = 0; this.chainAngle = 0;
         this.level = 1; this.xp = 0; this.xpNext = 40; this.runGold = 0; this.kills = 0; this.gameTime = 0;
@@ -629,6 +679,21 @@
         this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       }
       
+      initWorldObstacles() {
+        this.obstacles = [];
+        for (let x = -1600; x <= 2400; x += 380) {
+          for (let y = -1600; y <= 2400; y += 380) {
+            if (Math.hypot(x - 400, y - 300) < 220) continue;
+            const rand = Math.random();
+            if (rand < 0.35) {
+              this.obstacles.push(new MapObstacle(x + (Math.random() * 80 - 40), y + (Math.random() * 80 - 40), 'pillar'));
+            } else if (rand < 0.50) {
+              this.obstacles.push(new MapObstacle(x + (Math.random() * 80 - 40), y + (Math.random() * 80 - 40), 'break_chest'));
+            }
+          }
+        }
+      }
+
       showAd(cb) {
         const adUI = document.getElementById('ad-ui'); const timerEl = document.getElementById('ad-timer');
         adUI.style.display = 'flex'; let tl = 5; timerEl.innerText = tl;
@@ -735,17 +800,24 @@
       
       startRun() {
         this.eclipseMode = document.getElementById('eclipse-toggle').checked;
+        this.hyperMode = document.getElementById('hyper-toggle').checked;
+        this.swarmMode = document.getElementById('swarm-toggle').checked;
+
         this.audio.setMap(this.selectedMap);
         const stats = this.meta.getStats();
         const cls = CLASSES[this.selectedClass];
+        
         this.maxHp = Math.max(20, stats.maxHp + cls.hpMod);
         this.hp = this.maxHp;
-        this.speed = Math.max(120, (175 + cls.spdMod) * stats.speedMult);
+        this.speed = Math.max(120, (175 + cls.spdMod) * stats.speedMult * (this.hyperMode ? 1.25 : 1.0));
+        
         this.px = 400; this.py = 300; this.level = 1; this.xp = 0; this.xpNext = 40;
         this.runGold = 0; this.kills = 0; this.gameTime = 0;
         this.weapons = {}; this.weapons[cls.weapon] = 1; this.passives = {};
         this.chests = []; this.puddles = []; this.hasRevived = false; this.ogreKilled = false;
         this.eventsTriggered = { min2_golem: false, min330_swarm: false, min5_blackout: false, min8_finalboss: false };
+        
+        this.initWorldObstacles();
         this.isPaused = false;
         document.getElementById('menu-ui').style.display = 'none';
         document.getElementById('hud').style.display = 'flex';
@@ -841,8 +913,17 @@
         
         if (this.inputX !== 0 || this.inputY !== 0) {
           this.facingX = this.inputX; this.facingY = this.inputY;
-          this.px += this.inputX * this.speed * dt;
-          this.py += this.inputY * this.speed * dt;
+          const nextX = this.px + this.inputX * this.speed * dt;
+          const nextY = this.py + this.inputY * this.speed * dt;
+          
+          let col = false;
+          for (let i = 0; i < this.obstacles.length; i++) {
+            const ob = this.obstacles[i];
+            if (ob.active && Math.hypot(nextX - ob.x, nextY - ob.y) < ob.radius + 10) {
+              col = true; break;
+            }
+          }
+          if (!col) { this.px = nextX; this.py = nextY; }
         }
         
         const sec = this.gameTime;
@@ -850,26 +931,28 @@
           this.eventsTriggered.min2_golem = true;
           this.showAlert('⚠️ EL OGRO HA DESPERTADO');
           const b = this.enemyPool.obtain();
-          if (b) b.init(99, this.px + 400, this.py, 1.0, this.eclipseMode);
+          if (b) b.init(99, this.px + 400, this.py, 1.0, this.eclipseMode, this.hyperMode);
           this.trauma = 0.8;
         }
         if (sec >= 210 && !this.eventsTriggered.min330_swarm) {
           this.eventsTriggered.min330_swarm = true;
           this.showAlert('🌀 ¡ENJAMBRE!');
-          for (let i = 0; i < 70; i++) {
-            const a = (i / 70) * Math.PI * 2;
+          const sCount = this.swarmMode ? 140 : 70;
+          for (let i = 0; i < sCount; i++) {
+            const a = (i / sCount) * Math.PI * 2;
             const r = this.enemyPool.obtain();
-            if (r) r.init(0, this.px + Math.cos(a) * 520, this.py + Math.sin(a) * 520, 1.25, this.eclipseMode);
+            if (r) r.init(0, this.px + Math.cos(a) * 520, this.py + Math.sin(a) * 520, 1.25, this.eclipseMode, this.hyperMode);
           }
           this.trauma = 0.5;
         }
         if (sec >= 300 && !this.eventsTriggered.min5_blackout) {
           this.eventsTriggered.min5_blackout = true;
           this.showAlert('🌑 LA LUNA DE SANGRE');
-          for (let i = 0; i < 8; i++) {
+          const cCount = this.swarmMode ? 16 : 8;
+          for (let i = 0; i < cCount; i++) {
             const a = Math.random() * Math.PI * 2;
             const c = this.enemyPool.obtain();
-            if (c) c.init(4, this.px + Math.cos(a) * 480, this.py + Math.sin(a) * 480, 1.45, this.eclipseMode);
+            if (c) c.init(4, this.px + Math.cos(a) * 480, this.py + Math.sin(a) * 480, 1.45, this.eclipseMode, this.hyperMode);
           }
           this.trauma = 0.6;
         }
@@ -877,13 +960,14 @@
           this.eventsTriggered.min8_finalboss = true;
           this.showAlert('👑 ¡DRAGÓN DE LA NOCHE!');
           const f = this.enemyPool.obtain();
-          if (f) f.init(100, this.px + 450, this.py, 1.6, this.eclipseMode);
+          if (f) f.init(100, this.px + 450, this.py, 1.6, this.eclipseMode, this.hyperMode);
           this.trauma = 1.0;
         }
         
         const min = sec / 60;
         const diffCurve = 1 + min * 0.28 + Math.pow(min, 1.2) * 0.05;
-        if (Math.random() < Math.min(0.40, 0.09 + min * 0.035)) {
+        const baseSpawnProb = (this.swarmMode ? 0.70 : 0.40);
+        if (Math.random() < Math.min(baseSpawnProb, (this.swarmMode ? 0.18 : 0.09) + min * 0.035)) {
           const e = this.enemyPool.obtain();
           if (e) {
             const ang = Math.random() * Math.PI * 2, sx = this.px + Math.cos(ang) * 450, sy = this.py + Math.sin(ang) * 450;
@@ -894,7 +978,7 @@
             else if (min > 3.0 && Math.random() < 0.4) t = 2;
             else if (min > 1.5 && Math.random() < 0.3) t = 3;
             else if (min > 4.0 && Math.random() < 0.2) t = 1;
-            e.init(t, sx, sy, diffCurve, this.eclipseMode);
+            e.init(t, sx, sy, diffCurve, this.eclipseMode, this.hyperMode);
           }
         }
         
@@ -922,12 +1006,29 @@
           p.update(dt, this.grid, en, this.nearbyBuf, (e, dmg) => this.hitEnemy(e, dmg, 0, 0));
           if (!p.active) this.puddles.splice(i, 1);
         }
+        
         const pr = this.projPool.getActive();
         for (let i = 0; i < pr.length; i++) {
           const p = pr[i]; if (!p.active) continue;
           p.update(dt, this.projPool, this.sparkPool);
           if (!p.active) continue;
-          if (p.isHostile) {
+          
+          if (!p.ih) {
+            for (let o = 0; o < this.obstacles.length; o++) {
+              const ob = this.obstacles[o];
+              if (ob.active && Math.hypot(p.x - ob.x, p.y - ob.y) < ob.radius + 6) {
+                if (ob.applyDamage(p.d)) {
+                  ob.active = false;
+                  const gm = this.gemPool.obtain();
+                  if (gm) gm.init(ob.x, ob.y, 40);
+                }
+                if (!p.ig) { this.projPool.release(p); break; }
+              }
+            }
+            if (!p.active) continue;
+          }
+
+          if (p.ih) {
             if (Math.hypot(this.px - p.x, this.py - p.y) < 14) {
               this.hp -= p.damage; this.trauma = Math.min(1.0, this.trauma + 0.3); this.projPool.release(p);
               if (this.hp <= 0) { this.hp = 0; this.triggerGameOver(true); return; }
@@ -984,15 +1085,16 @@
       updateWeapons(dt, ms) {
         const am = 1.0 + (this.passives.pressure_boiler || 0) * 0.20 + (this.selectedClass === 'golem' ? 0.20 : 0);
         const dm = ms.damageMult * (1 + (this.passives.volatile_oil || 0) * 0.15);
-        
+        const hSpd = this.hyperMode ? 1.25 : 1.0;
+
         if (this.weapons.soul_gatling) {
           this.shootTimer += dt;
-          if (this.shootTimer >= 0.075) {
+          if (this.shootTimer >= (0.075 / hSpd)) {
             this.shootTimer = 0; const p = this.projPool.obtain();
             if (p) {
               const sp = (Math.random() - 0.5) * 0.15;
               const a = Math.atan2(this.facingY, this.facingX) + sp;
-              p.init(this.px, this.py, Math.cos(a), Math.sin(a), 42 * dm, 720, 999, false, '#f8fafc', true);
+              p.init(this.px, this.py, Math.cos(a), Math.sin(a), 42 * dm, 720 * hSpd, 999, false, '#f8fafc', true);
               this.audio.playShoot();
             }
           }
@@ -1000,10 +1102,10 @@
           const rL = this.weapons.brass_revolver || 0;
           if (rL > 0) {
             this.shootTimer += dt;
-            if (this.shootTimer >= Math.max(0.16, 0.42 - rL * 0.04)) {
+            if (this.shootTimer >= (Math.max(0.16, 0.42 - rL * 0.04) / hSpd)) {
               this.shootTimer = 0; const p = this.projPool.obtain();
               if (p) {
-                p.init(this.px, this.py, this.facingX, this.facingY, (20 + rL * 5) * dm, 540, 1, false, '#d6d3d1');
+                p.init(this.px, this.py, this.facingX, this.facingY, (20 + rL * 5) * dm, 540 * hSpd, 1, false, '#d6d3d1');
                 this.audio.playShoot();
               }
             }
@@ -1012,7 +1114,7 @@
         
         if (this.weapons.aether_furnace) {
           this.vortexTimer += dt;
-          if (this.vortexTimer >= 0.15) {
+          if (this.vortexTimer >= (0.15 / hSpd)) {
             this.vortexTimer = 0; const r = 160 * am, d = 52 * dm;
             const c = this.grid.query(this.px, this.py, r, this.nearbyBuf), en = this.enemyPool.getActive();
             for (let i = 0; i < c; i++) {
@@ -1026,7 +1128,7 @@
           const vL = this.weapons.steam_vortex || 0;
           if (vL > 0) {
             this.vortexTimer += dt;
-            if (this.vortexTimer >= 0.22) {
+            if (this.vortexTimer >= (0.22 / hSpd)) {
               this.vortexTimer = 0; const r = (65 + vL * 9) * am, d = (8 + vL * 4) * dm;
               const c = this.grid.query(this.px, this.py, r, this.nearbyBuf), en = this.enemyPool.getActive();
               for (let i = 0; i < c; i++) {
@@ -1041,7 +1143,7 @@
         
         if (this.weapons.tesla_judgement) {
           this.teslaTimer += dt;
-          if (this.teslaTimer >= 0.85) {
+          if (this.teslaTimer >= (0.85 / hSpd)) {
             this.teslaTimer = 0; const en = this.enemyPool.getActive(); let h = 0;
             for (let i = 0; i < en.length; i++) {
               const e = en[i];
@@ -1055,7 +1157,7 @@
           const tL = this.weapons.galvanic_strike || 0;
           if (tL > 0) {
             this.teslaTimer += dt;
-            if (this.teslaTimer >= 1.8) {
+            if (this.teslaTimer >= (1.8 / hSpd)) {
               this.teslaTimer = 0; const en = this.enemyPool.getActive(); let h = 0;
               for (let i = 0; i < en.length; i++) {
                 const e = en[i];
@@ -1073,7 +1175,7 @@
         const aL = this.weapons.acid_flask || 0;
         if (aL > 0 || isP) {
           this.acidTimer += dt;
-          if (this.acidTimer >= (isP ? 1.0 : 2.2)) {
+          if (this.acidTimer >= ((isP ? 1.0 : 2.2) / hSpd)) {
             this.acidTimer = 0; const p = new AcidPuddle();
             const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 90;
             p.init(this.px + Math.cos(a) * d, this.py + Math.sin(a) * d, (isP ? 42 : 14 + aL * 6) * dm, (isP ? 105 : 48 + aL * 7) * am, isP);
@@ -1084,7 +1186,7 @@
         const isT = !!this.weapons.thorn_vortex;
         const cL = this.weapons.aether_chains || 0;
         if (cL > 0 || isT) {
-          this.chainAngle += dt * (isT ? 8.5 : 5.0);
+          this.chainAngle += dt * (isT ? 8.5 : 5.0) * hSpd;
           const r = (isT ? 120 : 70 + cL * 9) * am;
           const count = isT ? 4 : 2;
           for (let b = 0; b < count; b++) {
@@ -1103,10 +1205,10 @@
         const gL = this.weapons.gear_launcher || 0;
         if (gL > 0) {
           this.gearTimer += dt;
-          if (this.gearTimer >= 1.0) {
+          if (this.gearTimer >= (1.0 / hSpd)) {
             this.gearTimer = 0; const p = this.projPool.obtain();
             if (p) {
-              p.init(this.px, this.py, this.facingX, this.facingY, (26 + gL * 7) * dm, 480, 3 + gL, false, '#fef08a');
+              p.init(this.px, this.py, this.facingX, this.facingY, (26 + gL * 7) * dm, 480 * hSpd, 3 + gL, false, '#fef08a');
               this.audio.playShoot();
             }
           }
@@ -1128,7 +1230,11 @@
             sp.init(e.x, e.y, Math.cos(a) * s, Math.sin(a) * s, c);
           }
         }
-        this.kills++; const gM = this.eclipseMode ? 3 : 1;
+        this.kills++;
+        let gM = 1;
+        if (this.eclipseMode) gM *= 3;
+        if (this.swarmMode) gM *= 2;
+        
         if (e.isFinalBoss) {
           this.runGold += 500 * gM; this.triggerGameOver(false); return;
         } else if (e.isBoss) {
@@ -1288,6 +1394,8 @@
         for (let y = sY; y < sY + this.h + 128; y += 64) {
           ctx.beginPath(); ctx.moveTo(sX, y); ctx.lineTo(sX + this.w + 128, y); ctx.stroke();
         }
+        
+        for (let i = 0; i < this.obstacles.length; i++) this.obstacles[i].render(ctx);
         for (let i = 0; i < this.puddles.length; i++) this.puddles[i].render(ctx);
         const sp = this.sparkPool.getActive(); for (let i = 0; i < sp.length; i++) sp[i].render(ctx);
         const en = this.enemyPool.getActive(); for (let i = 0; i < en.length; i++) en[i].render(ctx);
