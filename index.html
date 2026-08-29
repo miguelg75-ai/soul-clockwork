@@ -813,8 +813,8 @@
         const stats = this.meta.getStats();
         const cls = CLASSES[this.selectedClass];
         
-        this.maxHp = Math.max(20, stats.maxHp + cls.hpMod);
-        this.hp = this.maxHp;
+        this.maxHp = Number(stats.maxHp || 100) + Number(cls.hpMod || 0);
+        this.hp = Number(this.maxHp);
         this.speed = Math.max(120, (175 + cls.spdMod) * stats.speedMult * (this.hyperMode ? 1.25 : 1.0));
         
         this.px = 400; this.py = 300; this.level = 1; this.xp = 0; this.xpNext = 40;
